@@ -21,15 +21,16 @@ type RssController(logger: ILogger<RssController>) =
     inherit ControllerBase()
 
     let parseRSSdotnet () =
-        using (XmlReader.Create("https://about.gitlab.com/atom.xml")) (fun reader ->
-            SyndicationFeed.Load(reader).Items
-            |> Seq.map (fun item ->
-                new RSS(
-                    item.Title.Text,
-                    match item.Links |> Seq.tryHead with
-                    | Some first -> first.Uri.AbsoluteUri
-                    | None -> "-"
-                )))
+        use reader = (XmlReader.Create("https://about.gitlab.com/atom.xml"))
+
+        SyndicationFeed.Load(reader).Items
+        |> Seq.map (fun item ->
+            new RSS(
+                item.Title.Text,
+                match item.Links |> Seq.tryHead with
+                | Some first -> first.Uri.AbsoluteUri
+                | None -> "-"
+            ))
 
 
     [<HttpGet>]
