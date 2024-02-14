@@ -1,0 +1,46 @@
+STORAGE: NONE
+NUGET
+  remote: https://api.nuget.org/v3/index.json
+    FSharp.Control.Websockets (0.2.3) - restriction: >= net6.0
+      FSharp.Core (>= 6.0) - restriction: || (>= net461) (>= netstandard2.0)
+      Microsoft.IO.RecyclableMemoryStream (>= 2.2.1) - restriction: || (>= net461) (>= netstandard2.0)
+    FSharp.Core (8.0.200) - restriction: >= net6.0
+    Giraffe (6.2) - restriction: >= net6.0
+      FSharp.Core (>= 6.0) - restriction: >= net6.0
+      Giraffe.ViewEngine (>= 1.4) - restriction: >= net6.0
+      Microsoft.IO.RecyclableMemoryStream (>= 2.2.1) - restriction: >= net6.0
+      Newtonsoft.Json (>= 13.0.3) - restriction: >= net6.0
+      System.Text.Json (>= 7.0.3) - restriction: >= net6.0
+    Giraffe.ViewEngine (1.4) - restriction: >= net6.0
+      FSharp.Core (>= 5.0) - restriction: >= netstandard2.0
+    Microsoft.AspNetCore.Authentication.JwtBearer (8.0.2) - restriction: >= net6.0
+      Microsoft.IdentityModel.Protocols.OpenIdConnect (>= 7.1.2) - restriction: >= net8.0
+    Microsoft.IdentityModel.Abstractions (7.3.1) - restriction: >= net8.0
+    Microsoft.IdentityModel.JsonWebTokens (7.3.1) - restriction: >= net8.0
+      Microsoft.IdentityModel.Tokens (>= 7.3.1) - restriction: || (&& (>= net461) (< netstandard2.0)) (&& (< net461) (>= netstandard2.0)) (>= net462) (>= net6.0)
+    Microsoft.IdentityModel.Logging (7.3.1) - restriction: >= net8.0
+      Microsoft.IdentityModel.Abstractions (>= 7.3.1) - restriction: || (&& (>= net461) (< netstandard2.0)) (&& (< net461) (>= netstandard2.0)) (>= net462) (>= net6.0)
+    Microsoft.IdentityModel.Protocols (7.3.1) - restriction: >= net8.0
+      Microsoft.IdentityModel.Logging (>= 7.3.1) - restriction: || (&& (>= net461) (< netstandard2.0)) (&& (< net461) (>= netstandard2.0)) (>= net462) (>= net6.0)
+      Microsoft.IdentityModel.Tokens (>= 7.3.1) - restriction: || (&& (>= net461) (< netstandard2.0)) (&& (< net461) (>= netstandard2.0)) (>= net462) (>= net6.0)
+    Microsoft.IdentityModel.Protocols.OpenIdConnect (7.3.1) - restriction: >= net8.0
+      Microsoft.IdentityModel.Protocols (>= 7.3.1) - restriction: || (&& (>= net461) (< netstandard2.0)) (&& (< net461) (>= netstandard2.0)) (>= net462) (>= net6.0)
+      System.IdentityModel.Tokens.Jwt (>= 7.3.1) - restriction: || (&& (>= net461) (< netstandard2.0)) (&& (< net461) (>= netstandard2.0)) (>= net462) (>= net6.0)
+    Microsoft.IdentityModel.Tokens (7.3.1) - restriction: >= net8.0
+      Microsoft.IdentityModel.Logging (>= 7.3.1) - restriction: || (&& (>= net461) (< netstandard2.0)) (&& (< net461) (>= netstandard2.0)) (>= net462) (>= net6.0)
+    Microsoft.IO.RecyclableMemoryStream (3.0) - restriction: >= net6.0
+    Newtonsoft.Json (13.0.3) - restriction: >= net6.0
+    Saturn (0.16.1)
+      FSharp.Control.Websockets (>= 0.2.2) - restriction: >= net6.0
+      Giraffe (>= 6.0) - restriction: >= net6.0
+      Microsoft.AspNetCore.Authentication.JwtBearer (>= 6.0.3) - restriction: >= net6.0
+    System.IdentityModel.Tokens.Jwt (7.3.1) - restriction: >= net8.0
+      Microsoft.IdentityModel.JsonWebTokens (>= 7.3.1) - restriction: || (&& (>= net461) (< netstandard2.0)) (&& (< net461) (>= netstandard2.0)) (>= net462) (>= net6.0)
+      Microsoft.IdentityModel.Tokens (>= 7.3.1) - restriction: || (&& (>= net461) (< netstandard2.0)) (&& (< net461) (>= netstandard2.0)) (>= net462) (>= net6.0)
+    System.Runtime.CompilerServices.Unsafe (6.0) - restriction: || (&& (>= net462) (>= net6.0)) (&& (>= net6.0) (< net7.0))
+    System.ServiceModel.Syndication (8.0)
+    System.Text.Encodings.Web (8.0) - restriction: >= net6.0
+      System.Runtime.CompilerServices.Unsafe (>= 6.0) - restriction: || (>= net462) (&& (>= net6.0) (< net7.0)) (&& (< net6.0) (>= netstandard2.0))
+    System.Text.Json (8.0.2) - restriction: >= net6.0
+      System.Runtime.CompilerServices.Unsafe (>= 6.0) - restriction: || (>= net462) (&& (>= net6.0) (< net7.0)) (&& (< net6.0) (>= netstandard2.0))
+      System.Text.Encodings.Web (>= 8.0) - restriction: || (>= net462) (>= netstandard2.0)
