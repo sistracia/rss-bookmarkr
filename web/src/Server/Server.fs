@@ -52,6 +52,11 @@ let apiRouter = router { forward "/rss" rssController }
 
 let defaultView = router { forward "/api" apiRouter }
 
-let app = application { use_router defaultView }
+let app =
+    application {
+        use_router defaultView
+        memory_cache
+        use_gzip
+    }
 
 run app
