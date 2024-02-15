@@ -1,5 +1,11 @@
 source https://api.nuget.org/v3/index.json
 
 storage: none
+nuget Fable.Core
+nuget Fable.Elmish
+nuget Fable.Elmish.React
+nuget Fable.Remoting.Client
+nuget Fable.Remoting.Giraffe
+nuget Feliz
 nuget Saturn
 nuget System.ServiceModel.Syndication

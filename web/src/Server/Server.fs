@@ -1,23 +1,11 @@
 open Microsoft.AspNetCore.Http
 open Saturn
-open System
 open System.Xml
 open System.ServiceModel.Syndication
+open Fable.Remoting.Server
+open Fable.Remoting.Giraffe
 
-type RSS =
-    struct
-        val Title: string
-
-        val LastUpdatedTime: DateTime
-
-        val Link: string
-
-        new(title: string, lastUpdatedTime: DateTime, link: string) =
-            { Title = title
-              LastUpdatedTime = lastUpdatedTime
-              Link = link }
-    end
-
+open Shared
 
 let parseRSS (url: string) =
     async {
@@ -35,22 +23,39 @@ let parseRSS (url: string) =
                 ))
     }
 
+let getRSSList (urls: string array) =
+    async {
+        let! rssList = urls |> Seq.map parseRSS |> Async.Parallel
+
+        return
+            rssList
+            |> Array.fold (fun acc elem -> Seq.concat [ acc; elem ]) []
+            |> Seq.sortByDescending (fun rss -> rss.LastUpdatedTime)
+    }
+
+let rssStore: IRSSStore = { getRSSList = getRSSList }
+
+let webApp =
+    Remoting.createApi ()
+    |> Remoting.withRouteBuilder Route.routeBuilder
+    |> Remoting.fromValue rssStore
+    |> Remoting.buildHttpHandler
+
 let rssIndexAction (ctx: HttpContext) =
     task {
-        let! rssList = ctx.Request.Query.Item("url").ToArray() |> Seq.map parseRSS |> Async.Parallel
-
-        return!
-            rssList
-            |> Array.reduce (fun acc elem -> Seq.concat [ acc; elem ])
-            |> Seq.sortByDescending (fun rss -> rss.LastUpdatedTime)
-            |> Controller.json ctx
+        let! rssList = ctx.Request.Query.Item("url").ToArray() |> getRSSList
+        return! rssList |> Controller.json ctx
     }
 
 let rssController = controller { index rssIndexAction }
 
 let apiRouter = router { forward "/rss" rssController }
 
-let defaultView = router { forward "/api" apiRouter }
+let defaultView =
+    router {
+        forward "" webApp
+        forward "/api" apiRouter
+    }
 
 let app =
     application {
