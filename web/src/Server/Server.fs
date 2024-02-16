@@ -29,7 +29,7 @@ let getRSSList (urls: string array) =
 
         return
             rssList
-            |> Array.fold (fun acc elem -> Seq.concat [ acc; elem ]) []
+            |> Seq.fold (fun acc elem -> Seq.concat [ acc; elem ]) []
             |> Seq.sortByDescending (fun rss -> rss.LastUpdatedTime)
     }
 
