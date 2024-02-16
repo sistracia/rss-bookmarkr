@@ -2,19 +2,11 @@
 
 open System
 
+[<Struct>]
 type RSS =
-    struct
-        val Title: string
-
-        val LastUpdatedTime: DateTime
-
-        val Link: string
-
-        new(title: string, lastUpdatedTime: DateTime, link: string) =
-            { Title = title
-              LastUpdatedTime = lastUpdatedTime
-              Link = link }
-    end
+    { Title: string
+      LastUpdatedTime: DateTime
+      Link: string }
 
 
 type IRSSStore =

@@ -31,6 +31,10 @@ NUGET
     Fable.Elmish (4.1)
       Fable.Core (>= 3.7.1) - restriction: >= netstandard2.0
       FSharp.Core (>= 4.7.2) - restriction: >= netstandard2.0
+    Fable.Elmish.Debugger (4.0)
+      Fable.Elmish (>= 4.0) - restriction: >= netstandard2.0
+      FSharp.Core (>= 6.0.7) - restriction: >= netstandard2.0
+      Thoth.Json (>= 6.0) - restriction: >= netstandard2.0
     Fable.Elmish.React (4.0)
       Fable.Elmish (>= 4.0) - restriction: >= netstandard2.0
       Fable.ReactDom.Types (>= 18.0) - restriction: >= netstandard2.0
@@ -78,6 +82,9 @@ NUGET
     Feliz.CompilerPlugins (2.2) - restriction: >= netstandard2.0
       Fable.AST (>= 4.2.1) - restriction: >= netstandard2.0
       FSharp.Core (>= 4.7.2) - restriction: >= netstandard2.0
+    Feliz.DaisyUI (4.2)
+      Feliz (>= 2.7) - restriction: >= netstandard2.0
+      FSharp.Core (>= 4.7.2) - restriction: >= netstandard2.0
     FSharp.Control.Websockets (0.2.3) - restriction: >= net6.0
       FSharp.Core (>= 6.0) - restriction: || (>= net461) (>= netstandard2.0)
       Microsoft.IO.RecyclableMemoryStream (>= 2.2.1) - restriction: || (>= net461) (>= netstandard2.0)
@@ -122,3 +129,6 @@ NUGET
       System.Runtime.CompilerServices.Unsafe (>= 6.0) - restriction: || (>= net462) (&& (>= net6.0) (< net7.0)) (&& (< net6.0) (>= netstandard2.0))
       System.Text.Encodings.Web (>= 8.0) - restriction: || (>= net462) (>= netstandard2.0)
     System.ValueTuple (4.5) - restriction: && (>= net462) (>= netstandard2.0)
+    Thoth.Json (10.2) - restriction: >= netstandard2.0
+      Fable.Core (>= 3.6.2) - restriction: >= netstandard2.0
+      FSharp.Core (>= 4.7.2) - restriction: >= netstandard2.0

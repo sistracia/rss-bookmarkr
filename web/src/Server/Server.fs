@@ -14,13 +14,12 @@ let parseRSS (url: string) =
         return
             (SyndicationFeed.Load reader).Items
             |> Seq.map (fun item ->
-                new RSS(
-                    item.Title.Text,
-                    item.LastUpdatedTime.DateTime,
+                { Title = item.Title.Text
+                  LastUpdatedTime = item.LastUpdatedTime.DateTime
+                  Link =
                     match item.Links |> Seq.tryHead with
                     | Some first -> first.Uri.AbsoluteUri
-                    | None -> "-"
-                ))
+                    | None -> "-" })
     }
 
 let getRSSList (urls: string array) =
