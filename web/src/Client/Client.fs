@@ -35,13 +35,13 @@ type Msg =
     | GotRSSList of RSS seq
     | ErrorMsg of exn
 
-let musicStore: IRSSStore =
+let rssStore: IRSSStore =
     Remoting.createApi ()
     |> Remoting.withRouteBuilder Route.routeBuilder
     |> Remoting.buildProxy<IRSSStore>
 
 let getRSSList (urls: string array) =
-    async { return! musicStore.getRSSList urls }
+    async { return! rssStore.getRSSList urls }
 
 let route = oneOf [ map Search (top <?> stringParam "url") ]
 
