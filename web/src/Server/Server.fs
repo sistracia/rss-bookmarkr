@@ -24,10 +24,13 @@ let parseRSS (url: string) =
 
 let getRSSList (urls: string array) =
     async {
-        let! rssList = urls |> Seq.map parseRSS |> Async.Parallel
+        let! rssList = urls |> Seq.map (fun url -> parseRSS url |> Async.Catch) |> Async.Parallel
 
         return
             rssList
+            |> Seq.map (function
+                | Choice1Of2 rss -> rss
+                | Choice2Of2 _ -> Seq.empty)
             |> Seq.fold (fun acc elem -> Seq.concat [ acc; elem ]) []
             |> Seq.sortByDescending (fun rss -> rss.LastUpdatedTime)
     }
