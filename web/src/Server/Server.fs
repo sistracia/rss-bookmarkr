@@ -35,12 +35,17 @@ let getRSSList (urls: string array) =
             |> Seq.sortByDescending (fun rss -> rss.LastUpdatedTime)
     }
 
-let rssStore: IRSSStore = { getRSSList = getRSSList }
+let loginOrRegister (loginForm: LoginForm) =
+    async { printf $"{loginForm.Username}\n{loginForm.Password}\n" }
+
+let rpcStore: IRPCStore =
+    { getRSSList = getRSSList
+      loginOrRegister = loginOrRegister }
 
 let webApp =
     Remoting.createApi ()
     |> Remoting.withRouteBuilder Route.routeBuilder
-    |> Remoting.fromValue rssStore
+    |> Remoting.fromValue rpcStore
     |> Remoting.buildHttpHandler
 
 let rssIndexAction (ctx: HttpContext) =

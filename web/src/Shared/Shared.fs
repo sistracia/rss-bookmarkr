@@ -8,9 +8,12 @@ type RSS =
       LastUpdatedTime: DateTime
       Link: string }
 
+[<Struct>]
+type LoginForm = { Username: string; Password: string }
 
-type IRSSStore =
-    { getRSSList: string array -> RSS seq Async }
+type IRPCStore =
+    { getRSSList: string array -> RSS seq Async
+      loginOrRegister: LoginForm -> unit Async }
 
 module Route =
     let routeBuilder (typeName: string) (methodName: string) =
