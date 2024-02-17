@@ -7,6 +7,7 @@ open Elmish.UrlParser
 open Elmish.React
 open Fable.Remoting.Client
 open Feliz.DaisyUI
+open Feliz.DaisyUI.Operators
 open Shared
 
 #if DEBUG
@@ -30,6 +31,7 @@ type BrowserRoute = Search of string option
 type Msg =
     | UrlChanged of string
     | SetUrlParam of string
+    | RemoveUrlParam of string
     | GotRSSList of RSS seq
     | ErrorMsg of exn
 
@@ -51,15 +53,39 @@ let getUrlSearch (route: BrowserRoute option) =
         | None -> [||]
     | _ -> [||]
 
+let generateUrlSearch urls =
+    match (urls |> String.concat ",") with
+    | "" -> "/"
+    | newUrl -> ("?url=" + newUrl)
+
 let cmdGetRssList urls =
     match urls with
     | [||] -> Cmd.none
     | _ -> Cmd.OfAsync.either getRSSList urls GotRSSList ErrorMsg
 
-let urlUpdate (route: BrowserRoute option) model =
+let urlUpdate (route: BrowserRoute option) state =
     match route with
-    | Some(Search(_)) -> { model with ServerState = Loading }, cmdGetRssList (getUrlSearch route)
-    | None -> { model with ServerState = Idle }, Cmd.none
+    | Some(Search(_)) ->
+        let newUrls = (getUrlSearch route)
+
+        let (newServerState, newRSSList) =
+            match newUrls with
+            | [||] -> (Idle, Seq.empty)
+            | _ -> (Loading, state.RSSList)
+
+        { state with
+            Urls = newUrls
+            Url = ""
+            RSSList = newRSSList
+            ServerState = newServerState },
+        cmdGetRssList newUrls
+    | None ->
+        { state with
+            ServerState = Idle
+            RSSList = Seq.empty
+            Url = ""
+            Urls = Array.empty },
+        Cmd.none
 
 let init (route: BrowserRoute option) =
     let initUrls = getUrlSearch route
@@ -68,7 +94,7 @@ let init (route: BrowserRoute option) =
         match initUrls with
         | [||] -> Idle
         | _ -> Loading
-      RSSList = List.empty
+      RSSList = Seq.empty
       Url = ""
       Urls = initUrls },
     cmdGetRssList initUrls
@@ -77,18 +103,18 @@ let update (msg: Msg) (state: State) =
     match msg with
     | UrlChanged url -> { state with Url = url }, Cmd.none
     | SetUrlParam url ->
-        let isUrlExists = Array.exists (fun (elm: string) -> elm = url) state.Urls
+        let isUrlExists = state.Urls |> Array.exists (fun (elm: string) -> elm = url)
 
         if url <> "" && not isUrlExists then
-            let newUrls = Array.append state.Urls [| url |]
-
-            { state with
-                Urls = newUrls
-                Url = ""
-                ServerState = Loading },
-            Navigation.newUrl ("?url=" + (newUrls |> String.concat ","))
+            state, Array.append state.Urls [| url |] |> generateUrlSearch |> Navigation.newUrl
         else
             { state with Url = "" }, Cmd.none
+    | RemoveUrlParam url ->
+        state,
+        state.Urls
+        |> Array.filter (fun (elm: string) -> elm <> url)
+        |> generateUrlSearch
+        |> Navigation.newUrl
     | GotRSSList response ->
         { state with
             ServerState = Idle
@@ -116,6 +142,19 @@ let render (state: State) (dispatch: Msg -> unit) =
                                         [ button.neutral
                                           prop.onClick (fun _ -> dispatch (SetUrlParam state.Url))
                                           prop.text "Add" ]] ]
+                Html.div
+                    [ prop.className "flex flex-wrap gap-3"
+                      prop.children
+                          [ yield!
+                                [ for url in state.Urls do
+                                      Html.div
+                                          [ (color.bgNeutral ++ (prop.className "p-1 rounded-lg flex gap-1"))
+                                            prop.children
+                                                [ Daisy.button.button
+                                                      [ (button.error ++ button.xs)
+                                                        prop.onClick (fun _ -> dispatch (RemoveUrlParam url))
+                                                        prop.text "X" ]
+                                                  Html.span [ color.textNeutralContent; prop.text url ] ] ] ] ] ]
                 Html.div
                     [ prop.className "flex flex-col gap-3"
                       prop.children
@@ -145,11 +184,7 @@ let render (state: State) (dispatch: Msg -> unit) =
                                                                         prop.target "_blank"
                                                                         prop.rel "noopener"
                                                                         prop.text "Read" ] ] ] ] ] ]
-                            | ServerError errorMsg -> Daisy.alert [ alert.error; prop.text errorMsg ] ] ] ]
-
-          ]
-
-
+                            | ServerError errorMsg -> Daisy.alert [ alert.error; prop.text errorMsg ] ] ] ] ]
 
 Program.mkProgram init update render
 |> Program.toNavigable (parsePath route) urlUpdate
