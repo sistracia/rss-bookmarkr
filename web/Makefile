@@ -9,3 +9,9 @@ client:
 
 style:
 	bunx tailwindcss -i ./src/Client/input.css -o ./src/Client/output/output.css --watch
+
+migrate_up:
+	dotnet migrondi up --dry-run false
+
+migrate_down:
+	dotnet migrondi down --dry-run false
