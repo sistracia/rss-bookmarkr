@@ -12,5 +12,6 @@ nuget Fable.Remoting.Client
 nuget Fable.Remoting.Giraffe
 nuget Feliz
 nuget Feliz.DaisyUI
+nuget Npgsql.FSharp
 nuget Saturn
 nuget System.ServiceModel.Syndication

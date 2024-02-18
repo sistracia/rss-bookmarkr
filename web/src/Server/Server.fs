@@ -1,11 +1,25 @@
+open System
 open Microsoft.AspNetCore.Http
 open Saturn
 open System.Xml
 open System.ServiceModel.Syndication
 open Fable.Remoting.Server
 open Fable.Remoting.Giraffe
+open Npgsql.FSharp
 
 open Shared
+
+type User =
+    { Id: string
+      Username: string
+      Password: string }
+
+type RssUrl =
+    { Id: string
+      Url: string
+      UserId: string }
+
+let connectionString = Environment.GetEnvironmentVariable "DB_CONNECTION_STRING"
 
 let parseRSS (url: string) =
     async {
@@ -36,9 +50,23 @@ let getRSSList (urls: string array) =
     }
 
 let loginOrRegister (loginForm: LoginForm) =
-    async { printf $"{loginForm.Username}\n{loginForm.Password}\n" }
+    async {
+        let newUid = Guid.NewGuid().ToString()
 
-let rpcStore: IRPCStore =
+        connectionString
+        |> Sql.connect
+        |> Sql.query "INSERT INTO users (id, username, password) VALUES (@id, @username, @password)"
+        |> Sql.parameters
+            [ "@id", Sql.text newUid
+              "@username", Sql.text loginForm.Username
+              "@password", Sql.text loginForm.Password ]
+        |> Sql.executeNonQuery
+        |> ignore
+
+        return newUid
+    }
+
+let rpcStore =
     { getRSSList = getRSSList
       loginOrRegister = loginOrRegister }
 

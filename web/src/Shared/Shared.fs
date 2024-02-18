@@ -13,7 +13,7 @@ type LoginForm = { Username: string; Password: string }
 
 type IRPCStore =
     { getRSSList: string array -> RSS seq Async
-      loginOrRegister: LoginForm -> unit Async }
+      loginOrRegister: LoginForm -> string Async }
 
 module Route =
     let routeBuilder (typeName: string) (methodName: string) =

@@ -290,3 +290,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+## Uncategorized
+
+# Environment Variable
+.env

@@ -2,3 +2,4 @@ Saturn
 Giraffe
 System.ServiceModel.Syndication
 Fable.Remoting.Giraffe
+Npgsql.FSharp

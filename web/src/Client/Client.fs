@@ -24,11 +24,16 @@ type RSSState =
     { ServerState: ServerState
       RSSList: RSS seq }
 
+type UserState =
+    { ServerState: ServerState
+      UserId: string option }
+
 type SearchState = { Url: string; Urls: string array }
 
 type State =
     { SearchState: SearchState
       RssState: RSSState
+      UserState: UserState
       LoginFormState: LoginForm }
 
 type BrowserRoute = Search of string option
@@ -42,27 +47,28 @@ type Msg =
     | SetUrlParam of string
     | RemoveUrlParam of string
     | GotRSSList of RSS seq
+    | RssErrorMsg of exn
     | SetLoginFormValue of (LoginFormField * string)
     | Login
-    | GotLogin of unit
-    | ErrorMsg of exn
+    | GotLogin of string
+    | UserErrorMsg of exn
 
-let rpcStore: IRPCStore =
+let rpcStore =
     Remoting.createApi ()
     |> Remoting.withRouteBuilder Route.routeBuilder
     |> Remoting.buildProxy<IRPCStore>
 
-let getRSSList (urls: string array) =
+let getRSSList urls =
     async { return! rpcStore.getRSSList urls }
 
-let loginOrRegister (loginForm: LoginForm) =
+let loginOrRegister loginForm =
     async { return! rpcStore.loginOrRegister loginForm }
 
 let route = oneOf [ map Search (top <?> stringParam "url") ]
 
-let getUrlSearch (route: BrowserRoute option) =
+let getUrlSearch route =
     match route with
-    | Some(Search(query: string option)) ->
+    | Some(Search(query)) ->
         match query with
         | Some query -> query.Split [| ',' |] |> Array.distinct
         | None -> [||]
@@ -81,9 +87,9 @@ let changeLoginFormState state fieldName value =
 let cmdGetRssList urls =
     match urls with
     | [||] -> Cmd.none
-    | _ -> Cmd.OfAsync.either getRSSList urls GotRSSList ErrorMsg
+    | _ -> Cmd.OfAsync.either getRSSList urls GotRSSList RssErrorMsg
 
-let urlUpdate (route: BrowserRoute option) state =
+let urlUpdate route state =
     match route with
     | Some(Search(_)) ->
         let newUrls = (getUrlSearch route)
@@ -123,7 +129,7 @@ let urlUpdate (route: BrowserRoute option) state =
             RssState = rssState },
         Cmd.none
 
-let init (route: BrowserRoute option) =
+let init route =
     let initUrls = getUrlSearch route
 
     let rssState =
@@ -137,19 +143,21 @@ let init (route: BrowserRoute option) =
 
     let loginFormState = { Username = ""; Password = "" }
 
+    let userState = { UserId = None; ServerState = Idle }
+
     { SearchState = searchState
       RssState = rssState
+      UserState = userState
       LoginFormState = loginFormState },
     cmdGetRssList initUrls
 
-let update (msg: Msg) (state: State) =
+let update msg state =
     match msg with
     | UrlChanged url ->
         let searchState = { state.SearchState with Url = url }
         { state with SearchState = searchState }, Cmd.none
     | SetUrlParam url ->
-        let isUrlExists =
-            state.SearchState.Urls |> Array.exists (fun (elm: string) -> elm = url)
+        let isUrlExists = state.SearchState.Urls |> Array.exists (fun elm -> elm = url)
 
         if url <> "" && not isUrlExists then
             state,
@@ -162,7 +170,7 @@ let update (msg: Msg) (state: State) =
     | RemoveUrlParam url ->
         state,
         state.SearchState.Urls
-        |> Array.filter (fun (elm: string) -> elm <> url)
+        |> Array.filter (fun elm -> elm <> url)
         |> generateUrlSearch
         |> Navigation.newUrl
     | GotRSSList response ->
@@ -172,20 +180,37 @@ let update (msg: Msg) (state: State) =
                     ServerState = Idle
                     RSSList = response } },
         Cmd.none
+    | RssErrorMsg e ->
+        { state with
+            RssState =
+                { state.RssState with
+                    ServerState = ServerError e.Message } },
+        Cmd.none
     | SetLoginFormValue(fieldName, value) ->
         { state with
             LoginFormState = changeLoginFormState state.LoginFormState fieldName value },
         Cmd.none
-    | Login -> state, Cmd.OfAsync.either loginOrRegister state.LoginFormState GotLogin ErrorMsg
-    | GotLogin() -> state, Navigation.newUrl "/"
-    | ErrorMsg e ->
+    | Login ->
+        { state with
+            UserState =
+                { state.UserState with
+                    ServerState = Loading } },
+        Cmd.OfAsync.either loginOrRegister state.LoginFormState GotLogin UserErrorMsg
+    | GotLogin userId ->
+        { state with
+            UserState =
+                { state.UserState with
+                    ServerState = Idle
+                    UserId = Some userId } },
+        Navigation.newUrl "/"
+    | UserErrorMsg e ->
         { state with
             RssState =
                 { state.RssState with
                     ServerState = ServerError e.Message } },
         Cmd.none
 
-let render (state: State) (dispatch: Msg -> unit) =
+let render state dispatch =
     Html.div
         [ prop.className "max-w-[768px] p-5 mx-auto flex flex-col gap-3"
           prop.children
@@ -280,7 +305,7 @@ let render (state: State) (dispatch: Msg -> unit) =
                                                     prop.placeholder "******"
                                                     prop.onChange (fun value ->
                                                         dispatch (SetLoginFormValue(Password, value))) ] ]
-                                        Html.p "Account will be automatically created if not exist"
+                                        Html.p "Account will be automatically created if not exist."
                                         Daisy.modalAction
                                             [ Daisy.button.label [ prop.htmlFor "login-modal"; prop.text "Cancel" ]
                                               Daisy.button.label
