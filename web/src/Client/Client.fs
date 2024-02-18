@@ -1,4 +1,4 @@
-﻿module App
+module App
 
 open Feliz
 open Elmish
@@ -195,11 +195,21 @@ let update msg state =
             LoginFormState = changeLoginFormState state.LoginFormState fieldName value },
         Cmd.none
     | Login ->
+        let isFormFilled =
+            state.LoginFormState.Username <> "" && state.LoginFormState.Password <> ""
+
         { state with
             UserState =
-                { state.UserState with
-                    ServerState = Loading } },
-        Cmd.OfAsync.either loginOrRegister state.LoginFormState GotLogin UserErrorMsg
+                if isFormFilled then
+                    { state.UserState with
+                        ServerState = Loading }
+                else
+                    { state.UserState with
+                        LoginError = Some "Fields are requried!" } },
+        if isFormFilled then
+            Cmd.OfAsync.either loginOrRegister state.LoginFormState GotLogin UserErrorMsg
+        else
+            Cmd.none
     | GotLogin userId ->
         let (newLoginFormState, LoginError) =
             match userId with
@@ -302,38 +312,43 @@ let render state dispatch =
                       Daisy.modal.div
                           [ prop.children
                                 [ Daisy.modalBox.div
-                                      [ Html.h2 [ prop.text "Log In Form" ]
-                                        Daisy.formControl
-                                            [ Daisy.label
-                                                  [ prop.htmlFor "login-username-field"
-                                                    prop.children [ Daisy.labelText "Username" ] ]
-                                              Daisy.input
-                                                  [ input.bordered
-                                                    prop.id "login-username-field"
-                                                    prop.placeholder "Username"
-                                                    prop.value state.LoginFormState.Username
-                                                    prop.onChange (fun value ->
-                                                        dispatch (SetLoginFormValue(Username, value))) ] ]
-                                        Daisy.formControl
-                                            [ Daisy.label
-                                                  [ prop.htmlFor "password-username-field"
-                                                    prop.children [ Daisy.labelText "Password" ] ]
-                                              Daisy.input
-                                                  [ input.bordered
-                                                    prop.id "password-username-field"
-                                                    prop.type' "password"
-                                                    prop.placeholder "******"
-                                                    prop.value state.LoginFormState.Password
-                                                    prop.onChange (fun value ->
-                                                        dispatch (SetLoginFormValue(Password, value))) ] ]
-                                        Html.p "Account will be automatically created if not exist."
-                                        Daisy.modalAction
-                                            [ Daisy.button.label [ prop.htmlFor "login-modal"; prop.text "Cancel" ]
-                                              Daisy.button.label
-                                                  [ button.neutral
-                                                    prop.htmlFor "login-modal"
-                                                    prop.text "Log In"
-                                                    prop.onClick (fun _ -> dispatch (Login)) ] ] ] ] ] ] ] ]
+                                      [ Html.form
+                                            [ Html.h2 [ prop.text "Log In Form" ]
+                                              Daisy.formControl
+                                                  [ Daisy.label
+                                                        [ prop.htmlFor "login-username-field"
+                                                          prop.children [ Daisy.labelText "Username" ] ]
+                                                    Daisy.input
+                                                        [ input.bordered
+                                                          prop.id "login-username-field"
+                                                          prop.placeholder "Username"
+                                                          prop.required true
+                                                          prop.value state.LoginFormState.Username
+                                                          prop.onChange (fun value ->
+                                                              dispatch (SetLoginFormValue(Username, value))) ] ]
+                                              Daisy.formControl
+                                                  [ Daisy.label
+                                                        [ prop.htmlFor "password-username-field"
+                                                          prop.children [ Daisy.labelText "Password" ] ]
+                                                    Daisy.input
+                                                        [ input.bordered
+                                                          prop.id "password-username-field"
+                                                          prop.type' "password"
+                                                          prop.placeholder "******"
+                                                          prop.required true
+                                                          prop.value state.LoginFormState.Password
+                                                          prop.onChange (fun value ->
+                                                              dispatch (SetLoginFormValue(Password, value))) ] ]
+                                              Html.p "Account will be automatically created if not exist."
+                                              Daisy.modalAction
+                                                  [ Daisy.button.label
+                                                        [ prop.htmlFor "login-modal"; prop.text "Cancel" ]
+                                                    Daisy.button.label
+                                                        [ button.neutral
+                                                          prop.htmlFor "login-modal"
+                                                          prop.text "Log In"
+                                                          prop.type' "submit"
+                                                          prop.onClick (fun _ -> dispatch (Login)) ] ] ] ] ] ] ] ] ]
 
 Program.mkProgram init update render
 |> Program.toNavigable (parsePath route) urlUpdate
