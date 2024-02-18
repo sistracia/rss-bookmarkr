@@ -1,4 +1,4 @@
-module App
+﻿module App
 
 open Feliz
 open Elmish
@@ -53,6 +53,7 @@ type Msg =
     | Login
     | GotLogin of string option
     | UserErrorMsg of exn
+    | Logout
 
 let rpcStore =
     Remoting.createApi ()
@@ -234,6 +235,13 @@ let update msg state =
                 { state.RssState with
                     ServerState = ServerError e.Message } },
         Cmd.none
+    | Logout ->
+        { state with
+            UserState =
+                { UserId = None
+                  ServerState = Idle
+                  LoginError = None } },
+        Cmd.none
 
 let render state dispatch =
     Html.div
@@ -244,8 +252,20 @@ let render state dispatch =
                       prop.children
                           [ Daisy.navbarStart [ Html.h1 [ prop.text "RSS Fetchr" ] ]
                             Daisy.navbarEnd
-                                [ Daisy.button.label
-                                      [ button.square; button.ghost; prop.htmlFor "login-modal"; prop.text "Log In" ] ] ] ]
+                                [ match state.UserState.UserId with
+                                  | Some _ ->
+                                      Daisy.button.label
+                                          [ button.ghost
+                                            prop.key "logout-button"
+                                            prop.onClick (fun _ -> dispatch Logout)
+                                            prop.text "Log Out" ]
+                                  | None ->
+                                      Daisy.button.label
+                                          [ button.ghost
+                                            prop.key "login-button"
+                                            prop.htmlFor "login-modal"
+                                            prop.text "Log In" ] ] ] ]
+
                 Html.div
                     [ prop.className "w-full flex flex-wrap gap-3"
                       prop.children[Daisy.input
@@ -348,7 +368,7 @@ let render state dispatch =
                                                           prop.htmlFor "login-modal"
                                                           prop.text "Log In"
                                                           prop.type' "submit"
-                                                          prop.onClick (fun _ -> dispatch (Login)) ] ] ] ] ] ] ] ] ]
+                                                          prop.onClick (fun _ -> dispatch Login) ] ] ] ] ] ] ] ] ]
 
 Program.mkProgram init update render
 |> Program.toNavigable (parsePath route) urlUpdate
