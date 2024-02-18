@@ -102,10 +102,17 @@ let loginOrRegister loginForm =
             match getUser loginForm with
             | Some user ->
                 if user.Password = loginForm.Password then
-                    Some user.Id
+                    Some(
+                        { UserId = user.Id
+                          RssUrls = (getRSSUrls user.Id) |> List.toArray }
+                    )
                 else
                     None
-            | None -> Some(insertUser loginForm)
+            | None ->
+                Some(
+                    { UserId = (insertUser loginForm)
+                      RssUrls = Array.empty }
+                )
     }
 
 let saveRSSUrls (userId: string, urls: string array) =

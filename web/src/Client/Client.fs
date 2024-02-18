@@ -52,7 +52,7 @@ type Msg =
     | RssErrorMsg of exn
     | SetLoginFormValue of (LoginFormField * string)
     | Login
-    | GotLogin of string option
+    | GotLogin of LoginResponse option
     | UserErrorMsg of exn
     | Logout
 
@@ -221,15 +221,17 @@ let update msg state =
             Cmd.OfAsync.either loginOrRegister state.LoginFormState GotLogin UserErrorMsg
         else
             Cmd.none
-    | GotLogin userId ->
-        let (newLoginFormState, LoginError) =
-            match userId with
-            | Some _ ->
+    | GotLogin loginResponse ->
+        let (userId, rssUrls, newLoginFormState, LoginError) =
+            match loginResponse with
+            | Some response ->
+                Some(response.UserId),
+                response.RssUrls,
                 { state.LoginFormState with
                     Username = ""
                     Password = "" },
                 None
-            | None -> state.LoginFormState, Some "Login failed!"
+            | None -> None, Array.empty, state.LoginFormState, Some "Login failed!"
 
         { state with
             LoginFormState = newLoginFormState
@@ -237,8 +239,11 @@ let update msg state =
                 { state.UserState with
                     ServerState = Idle
                     UserId = userId
-                    LoginError = LoginError } },
-        Navigation.newUrl "/"
+                    LoginError = LoginError }
+            SearchState =
+                { state.SearchState with
+                    Urls = rssUrls } },
+        Navigation.newUrl (generateUrlSearch rssUrls)
     | UserErrorMsg e ->
         { state with
             RssState =

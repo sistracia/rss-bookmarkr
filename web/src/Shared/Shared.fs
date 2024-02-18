@@ -11,9 +11,12 @@ type RSS =
 [<Struct>]
 type LoginForm = { Username: string; Password: string }
 
+[<Struct>]
+type LoginResponse = { UserId: string; RssUrls: string array }
+
 type IRPCStore =
     { getRSSList: string array -> RSS seq Async
-      loginOrRegister: LoginForm -> string option Async
+      loginOrRegister: LoginForm -> LoginResponse option Async
       saveRSSUrls: (string * string array) -> unit Async }
 
 module Route =
