@@ -26,6 +26,7 @@ type RSSState =
 
 type UserState =
     { ServerState: ServerState
+      LoginError: string option
       UserId: string option }
 
 type SearchState = { Url: string; Urls: string array }
@@ -50,7 +51,7 @@ type Msg =
     | RssErrorMsg of exn
     | SetLoginFormValue of (LoginFormField * string)
     | Login
-    | GotLogin of string
+    | GotLogin of string option
     | UserErrorMsg of exn
 
 let rpcStore =
@@ -143,7 +144,10 @@ let init route =
 
     let loginFormState = { Username = ""; Password = "" }
 
-    let userState = { UserId = None; ServerState = Idle }
+    let userState =
+        { UserId = None
+          ServerState = Idle
+          LoginError = None }
 
     { SearchState = searchState
       RssState = rssState
@@ -197,11 +201,22 @@ let update msg state =
                     ServerState = Loading } },
         Cmd.OfAsync.either loginOrRegister state.LoginFormState GotLogin UserErrorMsg
     | GotLogin userId ->
+        let (newLoginFormState, LoginError) =
+            match userId with
+            | Some _ ->
+                { state.LoginFormState with
+                    Username = ""
+                    Password = "" },
+                None
+            | None -> state.LoginFormState, Some "Login failed!"
+
         { state with
+            LoginFormState = newLoginFormState
             UserState =
                 { state.UserState with
                     ServerState = Idle
-                    UserId = Some userId } },
+                    UserId = userId
+                    LoginError = LoginError } },
         Navigation.newUrl "/"
     | UserErrorMsg e ->
         { state with
@@ -277,7 +292,11 @@ let render state dispatch =
                                                                         prop.target "_blank"
                                                                         prop.rel "noopener"
                                                                         prop.text "Read" ] ] ] ] ] ]
-                            | ServerError errorMsg -> Daisy.alert [ alert.error; prop.text errorMsg ] ] ]
+                            | ServerError errorMsg -> Daisy.alert [ alert.error; prop.text errorMsg ]
+
+                            match state.UserState.LoginError with
+                            | Some errorMsg -> Daisy.alert [ alert.error; prop.text errorMsg ]
+                            | None -> () ] ]
                 Html.div
                     [ Daisy.modalToggle [ prop.id "login-modal" ]
                       Daisy.modal.div
@@ -292,6 +311,7 @@ let render state dispatch =
                                                   [ input.bordered
                                                     prop.id "login-username-field"
                                                     prop.placeholder "Username"
+                                                    prop.value state.LoginFormState.Username
                                                     prop.onChange (fun value ->
                                                         dispatch (SetLoginFormValue(Username, value))) ] ]
                                         Daisy.formControl
@@ -303,6 +323,7 @@ let render state dispatch =
                                                     prop.id "password-username-field"
                                                     prop.type' "password"
                                                     prop.placeholder "******"
+                                                    prop.value state.LoginFormState.Password
                                                     prop.onChange (fun value ->
                                                         dispatch (SetLoginFormValue(Password, value))) ] ]
                                         Html.p "Account will be automatically created if not exist."

@@ -36,6 +36,32 @@ let parseRSS (url: string) =
                     | None -> "-" })
     }
 
+let getUser (loginForm: LoginForm) =
+    connectionString
+    |> Sql.connect
+    |> Sql.query "SELECT id, username, password FROM users WHERE username = @username"
+    |> Sql.parameters [ "@username", Sql.string loginForm.Username ]
+    |> Sql.execute (fun read ->
+        { Id = read.string "id"
+          Username = read.text "username"
+          Password = read.text "password" })
+    |> List.tryHead
+
+let insertUser (loginForm: LoginForm) =
+    let newUid = Guid.NewGuid().ToString()
+
+    connectionString
+    |> Sql.connect
+    |> Sql.query "INSERT INTO users (id, username, password) VALUES (@id, @username, @password)"
+    |> Sql.parameters
+        [ "@id", Sql.text newUid
+          "@username", Sql.text loginForm.Username
+          "@password", Sql.text loginForm.Password ]
+    |> Sql.executeNonQuery
+    |> ignore
+
+    newUid
+
 let getRSSList (urls: string array) =
     async {
         let! rssList = urls |> Seq.map (fun url -> parseRSS url |> Async.Catch) |> Async.Parallel
@@ -49,21 +75,16 @@ let getRSSList (urls: string array) =
             |> Seq.sortByDescending (fun rss -> rss.LastUpdatedTime)
     }
 
-let loginOrRegister (loginForm: LoginForm) =
+let loginOrRegister loginForm =
     async {
-        let newUid = Guid.NewGuid().ToString()
-
-        connectionString
-        |> Sql.connect
-        |> Sql.query "INSERT INTO users (id, username, password) VALUES (@id, @username, @password)"
-        |> Sql.parameters
-            [ "@id", Sql.text newUid
-              "@username", Sql.text loginForm.Username
-              "@password", Sql.text loginForm.Password ]
-        |> Sql.executeNonQuery
-        |> ignore
-
-        return newUid
+        return
+            match getUser loginForm with
+            | Some user ->
+                if user.Password = loginForm.Password then
+                    Some user.Id
+                else
+                    None
+            | None -> Some(insertUser loginForm)
     }
 
 let rpcStore =
