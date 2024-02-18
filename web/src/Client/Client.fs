@@ -45,8 +45,9 @@ type LoginFormField =
 
 type Msg =
     | UrlChanged of string
-    | SetUrlParam of string
+    | SetUrlParam
     | RemoveUrlParam of string
+    | SaveUrls
     | GotRSSList of RSS seq
     | RssErrorMsg of exn
     | SetLoginFormValue of (LoginFormField * string)
@@ -65,6 +66,9 @@ let getRSSList urls =
 
 let loginOrRegister loginForm =
     async { return! rpcStore.loginOrRegister loginForm }
+
+let saveRSSUrlssss (userId, rssUrls) =
+    async { do! rpcStore.saveRSSUrls (userId, rssUrls) }
 
 let route = oneOf [ map Search (top <?> stringParam "url") ]
 
@@ -161,7 +165,8 @@ let update msg state =
     | UrlChanged url ->
         let searchState = { state.SearchState with Url = url }
         { state with SearchState = searchState }, Cmd.none
-    | SetUrlParam url ->
+    | SetUrlParam ->
+        let url = state.SearchState.Url
         let isUrlExists = state.SearchState.Urls |> Array.exists (fun elm -> elm = url)
 
         if url <> "" && not isUrlExists then
@@ -178,6 +183,11 @@ let update msg state =
         |> Array.filter (fun elm -> elm <> url)
         |> generateUrlSearch
         |> Navigation.newUrl
+    | SaveUrls ->
+        state,
+        match state.UserState.UserId with
+        | Some userId -> Cmd.OfAsync.attempt saveRSSUrlssss (userId, state.SearchState.Urls) RssErrorMsg
+        | None -> Cmd.none
     | GotRSSList response ->
         { state with
             RssState =
@@ -277,7 +287,7 @@ let render state dispatch =
 
                                     Daisy.button.button
                                         [ button.neutral
-                                          prop.onClick (fun _ -> dispatch (SetUrlParam state.SearchState.Url))
+                                          prop.onClick (fun _ -> dispatch SetUrlParam)
                                           prop.text "Add" ]] ]
                 Html.div
                     [ prop.className "flex flex-wrap gap-3"
@@ -293,6 +303,14 @@ let render state dispatch =
                                                         prop.onClick (fun _ -> dispatch (RemoveUrlParam url))
                                                         prop.text "X" ]
                                                   Html.span [ color.textNeutralContent; prop.text url ] ] ] ] ] ]
+                if state.SearchState.Urls.Length <> 0 && state.UserState.UserId <> None then
+                    Html.div
+                        [ prop.className "flex flex-wrap gap-3"
+                          prop.children
+                              [ Daisy.button.button
+                                    [ button.link
+                                      prop.onClick (fun _ -> dispatch SaveUrls)
+                                      prop.text "Save Urls" ] ] ]
                 Html.div
                     [ prop.className "flex flex-col gap-3"
                       prop.children

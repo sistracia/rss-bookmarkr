@@ -62,6 +62,27 @@ let insertUser (loginForm: LoginForm) =
 
     newUid
 
+let getRSSUrls (userId: string) =
+    connectionString
+    |> Sql.connect
+    |> Sql.query "SELECT url FROM rss_urls WHERE user_id = @user_id"
+    |> Sql.parameters [ "@user_id", Sql.string userId ]
+    |> Sql.execute (fun read -> read.text "url")
+
+let insertUrls (userId: string) (urls: string array) =
+    connectionString
+    |> Sql.connect
+    |> Sql.executeTransaction
+        [ "INSERT INTO rss_urls (id, url, user_id) VALUES (@id, @url, @user_id)",
+          [ yield!
+                urls
+                |> Array.map (fun url ->
+                    [ "@id", Sql.text (Guid.NewGuid().ToString())
+                      "@url", Sql.text url
+                      "@user_id", Sql.text userId ]) ] ]
+    |> ignore
+
+
 let getRSSList (urls: string array) =
     async {
         let! rssList = urls |> Seq.map (fun url -> parseRSS url |> Async.Catch) |> Async.Parallel
@@ -87,9 +108,23 @@ let loginOrRegister loginForm =
             | None -> Some(insertUser loginForm)
     }
 
+let saveRSSUrls (userId: string, urls: string array) =
+    async {
+        let existingUrls = (getRSSUrls userId) |> List.toArray
+
+        let newUrls =
+            urls |> Array.filter (fun url -> not <| Array.contains url existingUrls)
+
+        if newUrls.Length = 0 then
+            ()
+
+        insertUrls userId newUrls
+    }
+
 let rpcStore =
     { getRSSList = getRSSList
-      loginOrRegister = loginOrRegister }
+      loginOrRegister = loginOrRegister
+      saveRSSUrls = saveRSSUrls }
 
 let webApp =
     Remoting.createApi ()
