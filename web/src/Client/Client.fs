@@ -1,10 +1,12 @@
 ﻿module App
 
+open System
 open Feliz
 open Elmish
 open Elmish.Navigation
 open Elmish.UrlParser
 open Elmish.React
+open Fable.Core
 open Fable.Remoting.Client
 open Feliz.DaisyUI
 open Feliz.DaisyUI.Operators
@@ -24,10 +26,12 @@ type RSSState =
     { ServerState: ServerState
       RSSList: RSS seq }
 
+type User = { UserId: string; SessionId: string }
+
 type UserState =
     { ServerState: ServerState
       LoginError: string option
-      UserId: string option }
+      User: User option }
 
 type SearchState = { Url: string; Urls: string array }
 
@@ -51,10 +55,30 @@ type Msg =
     | GotRSSList of RSS seq
     | RssErrorMsg of exn
     | SetLoginFormValue of (LoginFormField * string)
+    | InitUser
     | Login
     | GotLogin of LoginResponse option
     | UserErrorMsg of exn
     | Logout
+
+/// Copy from https://github.com/Dzoukr/Yobo/blob/master/src/Yobo.Client/TokenStorage.fs
+let sessionKey = "session_id"
+
+let tryGetSessionId () : string option =
+    Browser.WebStorage.localStorage.getItem (sessionKey)
+    |> (function
+    | null -> None
+    | x -> Some(x))
+    |> Option.bind (fun x -> if String.IsNullOrWhiteSpace(x) then None else Some x)
+
+let removeSessionId () =
+    Browser.WebStorage.localStorage.removeItem (sessionKey)
+
+let setSessionId (sessionId: string) =
+    if String.IsNullOrWhiteSpace(sessionId) then
+        removeSessionId ()
+    else
+        Browser.WebStorage.localStorage.setItem (sessionKey, sessionId)
 
 let rpcStore =
     Remoting.createApi ()
@@ -69,6 +93,9 @@ let loginOrRegister loginForm =
 
 let saveRSSUrlssss (userId, rssUrls) =
     async { do! rpcStore.saveRSSUrls (userId, rssUrls) }
+
+let initLogin (sessionId) =
+    async { return! rpcStore.initLogin sessionId }
 
 let route = oneOf [ map Search (top <?> stringParam "url") ]
 
@@ -150,7 +177,7 @@ let init route =
     let loginFormState = { Username = ""; Password = "" }
 
     let userState =
-        { UserId = None
+        { User = None
           ServerState = Idle
           LoginError = None }
 
@@ -158,7 +185,7 @@ let init route =
       RssState = rssState
       UserState = userState
       LoginFormState = loginFormState },
-    cmdGetRssList initUrls
+    Cmd.batch [ cmdGetRssList initUrls; Cmd.ofMsg InitUser ]
 
 let update msg state =
     match msg with
@@ -185,8 +212,8 @@ let update msg state =
         |> Navigation.newUrl
     | SaveUrls ->
         state,
-        match state.UserState.UserId with
-        | Some userId -> Cmd.OfAsync.attempt saveRSSUrlssss (userId, state.SearchState.Urls) RssErrorMsg
+        match state.UserState.User with
+        | Some user -> Cmd.OfAsync.attempt saveRSSUrlssss (user.UserId, state.SearchState.Urls) RssErrorMsg
         | None -> Cmd.none
     | GotRSSList response ->
         { state with
@@ -221,29 +248,34 @@ let update msg state =
             Cmd.OfAsync.either loginOrRegister state.LoginFormState GotLogin UserErrorMsg
         else
             Cmd.none
+    | InitUser ->
+        match tryGetSessionId () with
+        | None -> state, Cmd.none
+        | Some sessionId -> state, Cmd.OfAsync.either initLogin sessionId GotLogin UserErrorMsg
     | GotLogin loginResponse ->
-        let (userId, rssUrls, newLoginFormState, LoginError) =
-            match loginResponse with
-            | Some response ->
-                Some(response.UserId),
-                response.RssUrls,
-                { state.LoginFormState with
-                    Username = ""
-                    Password = "" },
-                None
-            | None -> None, Array.empty, state.LoginFormState, Some "Login failed!"
+        match loginResponse with
+        | Some user ->
+            let newLoginFormState = { Username = ""; Password = "" }
 
-        { state with
-            LoginFormState = newLoginFormState
-            UserState =
-                { state.UserState with
-                    ServerState = Idle
-                    UserId = userId
-                    LoginError = LoginError }
-            SearchState =
-                { state.SearchState with
-                    Urls = rssUrls } },
-        Navigation.newUrl (generateUrlSearch rssUrls)
+            let newUser =
+                { UserId = user.UserId
+                  SessionId = user.SessionId }
+
+            let newUserState =
+                { ServerState = Idle
+                  LoginError = None
+                  User = Some newUser }
+
+            let newSearchState = { Url = ""; Urls = user.RssUrls }
+
+            setSessionId user.SessionId
+
+            { state with
+                LoginFormState = newLoginFormState
+                UserState = newUserState
+                SearchState = newSearchState },
+            Navigation.newUrl (generateUrlSearch user.RssUrls)
+        | None -> state, Cmd.none
     | UserErrorMsg e ->
         { state with
             RssState =
@@ -251,9 +283,11 @@ let update msg state =
                     ServerState = ServerError e.Message } },
         Cmd.none
     | Logout ->
+        removeSessionId ()
+
         { state with
             UserState =
-                { UserId = None
+                { User = None
                   ServerState = Idle
                   LoginError = None } },
         Cmd.none
@@ -267,7 +301,7 @@ let render state dispatch =
                       prop.children
                           [ Daisy.navbarStart [ Html.h1 [ prop.text "RSS Fetchr" ] ]
                             Daisy.navbarEnd
-                                [ match state.UserState.UserId with
+                                [ match state.UserState.User with
                                   | Some _ ->
                                       Daisy.button.label
                                           [ button.ghost
@@ -308,7 +342,7 @@ let render state dispatch =
                                                         prop.onClick (fun _ -> dispatch (RemoveUrlParam url))
                                                         prop.text "X" ]
                                                   Html.span [ color.textNeutralContent; prop.text url ] ] ] ] ] ]
-                if state.SearchState.Urls.Length <> 0 && state.UserState.UserId <> None then
+                if state.SearchState.Urls.Length <> 0 && state.UserState.User <> None then
                     Html.div
                         [ prop.className "flex flex-wrap gap-3"
                           prop.children

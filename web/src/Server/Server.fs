@@ -82,6 +82,25 @@ let insertUrls (userId: string) (urls: string array) =
                       "@user_id", Sql.text userId ]) ] ]
     |> ignore
 
+let insertSession (userId: string) (sessionId: string) =
+    connectionString
+    |> Sql.connect
+    |> Sql.query "INSERT INTO sessions (id, user_id) VALUES (@id, @user_id)"
+    |> Sql.parameters [ "@id", Sql.text sessionId; "@user_id", Sql.text userId ]
+    |> Sql.executeNonQuery
+    |> ignore
+
+let getUserSession (sessionId) =
+    connectionString
+    |> Sql.connect
+    |> Sql.query
+        "SELECT u.id AS user_id, u.username AS user_username, u.password AS user_password FROM users u LEFT JOIN sessions s ON s.user_id = u.id WHERE s.id = @session_id"
+    |> Sql.parameters [ "@session_id", Sql.string sessionId ]
+    |> Sql.execute (fun read ->
+        { Id = read.string "user_id"
+          Username = read.text "user_username"
+          Password = read.text "user_password" })
+    |> List.tryHead
 
 let getRSSList (urls: string array) =
     async {
@@ -98,21 +117,31 @@ let getRSSList (urls: string array) =
 
 let loginOrRegister loginForm =
     async {
-        return
+        let sessionId = Guid.NewGuid().ToString()
+
+        let user =
             match getUser loginForm with
+            | None ->
+                Some(
+                    { UserId = (insertUser loginForm)
+                      RssUrls = Array.empty
+                      SessionId = sessionId }
+                )
             | Some user ->
                 if user.Password = loginForm.Password then
                     Some(
                         { UserId = user.Id
-                          RssUrls = (getRSSUrls user.Id) |> List.toArray }
+                          RssUrls = (getRSSUrls user.Id) |> List.toArray
+                          SessionId = sessionId }
                     )
                 else
                     None
-            | None ->
-                Some(
-                    { UserId = (insertUser loginForm)
-                      RssUrls = Array.empty }
-                )
+
+        match user with
+        | None -> ()
+        | Some user -> insertSession user.UserId sessionId
+
+        return user
     }
 
 let saveRSSUrls (userId: string, urls: string array) =
@@ -128,10 +157,26 @@ let saveRSSUrls (userId: string, urls: string array) =
         insertUrls userId newUrls
     }
 
+let initLogin (sessionId: string) =
+    async {
+        return
+            sessionId
+            |> getUserSession
+            |> (function
+            | None -> None
+            | Some user ->
+                Some(
+                    { UserId = user.Id
+                      RssUrls = (getRSSUrls user.Id) |> List.toArray
+                      SessionId = sessionId }
+                ))
+    }
+
 let rpcStore =
     { getRSSList = getRSSList
       loginOrRegister = loginOrRegister
-      saveRSSUrls = saveRSSUrls }
+      saveRSSUrls = saveRSSUrls
+      initLogin = initLogin }
 
 let webApp =
     Remoting.createApi ()
