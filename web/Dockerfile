@@ -36,6 +36,7 @@ RUN cd /temp/prod && bun install --frozen-lockfile --production
 FROM client-base AS client-build
 COPY --from=client-install /temp/dev/node_modules node_modules
 COPY . .
+COPY --from=server-build /Server/src/Client/output ./src/Client/output
 
 ENV NODE_ENV=production
 RUN bunx tailwindcss -i ./src/Client/input.css -o ./src/Client/output/output.css --minify
