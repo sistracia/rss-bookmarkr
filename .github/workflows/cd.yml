@@ -40,7 +40,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./web
-          file: ./Dockerfile
+          file: ./web/Dockerfile
           push: true
           tags: ${{ secrets.DOCKER_REGISTRY }}/rss-fetchr:latest
           labels: |
