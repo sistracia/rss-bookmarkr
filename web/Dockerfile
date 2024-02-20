@@ -5,8 +5,8 @@ WORKDIR /Server
 # Copy everything
 COPY . .
 # Restore as distinct layers
-RUN dotnet restore
 RUN dotnet tool restore
+RUN dotnet restore
 RUN dotnet paket restore
 # Build and publish a release
 RUN dotnet fable --noCache --cwd src/Client -o output
