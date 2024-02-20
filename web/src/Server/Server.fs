@@ -202,6 +202,7 @@ let defaultView =
 
 let app =
     application {
+        use_static "wwwroot"
         use_router defaultView
         memory_cache
         use_gzip
