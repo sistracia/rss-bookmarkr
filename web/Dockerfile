@@ -1,13 +1,25 @@
-## Server Build Area
+# https://hub.docker.com/_/microsoft-dotnet
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS server-build
 WORKDIR /Server
 
-# Copy everything
-COPY . .
-# Restore as distinct layers
+# Install dependencies
+COPY *.sln .
+COPY paket.dependencies .
+COPY paket.lock .
+COPY .config/ .
+COPY .paket/ .
+
+COPY src/Client/*.fsproj src/Client/paket.references ./src/Client/
+COPY src/Server/*.fsproj src/Server/paket.references ./src/Server/
+COPY src/Shared/*.fsproj ./src/Shared/
+
 RUN dotnet tool restore
 RUN dotnet restore
 RUN dotnet paket restore
+
+# Copy everything
+COPY . .
+
 # Build and publish a release
 RUN dotnet fable --noCache --cwd src/Client -o output
 RUN dotnet publish src/Server -c Release -o publish
