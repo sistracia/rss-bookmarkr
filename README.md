@@ -48,9 +48,27 @@ See the script in [package.json here](./web/package.json) and in [Makefile here]
 bun run start
 ```
 
+## Migration
+
+```bash
+cd web
+```
+
+Create `migrondi.json`, see [Migrondi](https://github.com/AngelMunoz/migrondi).
+
+```bash
+cp migrondi.example.json migrondi.json
+```
+
+Edit the `connection` in `migrondi.json`, fill the _blank_ value. After that run the migration.
+
+```bash
+make migrate_up
+```
+
 ## Deployment
 
-## Using Docker
+### Using Docker
 
 See the [Dockerfile here](./web/Dockerfile).
 
@@ -66,7 +84,7 @@ ASPNETCORE_URLS_PORT=<SERVER APP PORT INSIDE Docker>
 ASPNETCORE_URLS=<SERVER APP HOST AND PORT INSIDE Docker>
 ```
 
-### Using `docker compose up`
+#### Using `docker compose up`
 
 See the [docker-compose.yaml here](./web/docker-compose.yaml).
 
@@ -74,7 +92,7 @@ See the [docker-compose.yaml here](./web/docker-compose.yaml).
 docker compose up
 ```
 
-### Using `docker build` and `docker run`
+#### Using `docker build` and `docker run`
 
 ```bash
 # Build
