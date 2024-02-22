@@ -1,9 +1,9 @@
 services:
   web:
-    image: localhost:5000/rss-fetchr
+    build: .
     container_name: rss-fetchr
     restart: unless-stopped
     ports:
-      - "${PORT}:8080"
+      - "${PORT}:${ASPNETCORE_URLS_PORT}"
     env_file:
       - .env
