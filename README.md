@@ -77,6 +77,7 @@ cd web
 ```
 
 Create `.env` file, [see example](./web/.env.example).
+
 ```env
 DB_CONNECTION_STRING=<POSTGRES CONNECTION STRING>
 PORT=<PUBLISHED PORT FOR THE SERVER APP INSIDE Docker> # Used for docker-compose
@@ -99,7 +100,7 @@ docker compose up
 docker build -t rss-bookmarkr -f ./Dockerfile .
 
 # Run
-docker run --env-file ./env -p <PUBLISHD PORT>:<SERVER APP PORT INSIDE Docker> rss-bookmarkr
+docker run --env-file ./.env -p <PUBLISHD PORT>:<SERVER APP PORT INSIDE Docker> rss-bookmarkr
 ## or
 docker run \
 -e DB_CONNECTION_STRING="POSTGRES CONNECTION STRING" \
@@ -107,21 +108,3 @@ docker run \
 -p <PUBLISHD PORT>:<SERVER APP PORT INSIDE Docker> \
 rss-bookmarkr
 ```
-
-## My Note
-
-This project is my first toy project using F#. I made it for learning purpose, still on the very tip of iceberg.
-
-Also currently I learning mobile development using Jetpack Compose and SwiftUI, and I'll use the API from the `web` app.
-
-I feel the `web` app codebase getting unreadable as it's grow, maybe I will comeback later when I already good in F#
-
-My thought of F# is it's cool, it's my first functional paradigm language I learned, and I like it.
-
-## TODO I Want to Try
-- [ ] Clean Up Codebase
-- [ ] Add Subscription Feature
-- [ ] Try FAKE instead of Makefile
-- [ ] Build Android Client with Jetpack Compose
-- [ ] Build Swift Client with SwiftUI
-- [ ] Try Kotlin Multiplatform
