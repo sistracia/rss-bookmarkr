@@ -6,7 +6,6 @@ open Elmish
 open Elmish.Navigation
 open Elmish.UrlParser
 open Elmish.React
-open Fable.Core
 open Fable.Remoting.Client
 open Feliz.DaisyUI
 open Feliz.DaisyUI.Operators
@@ -16,6 +15,72 @@ open Shared
 open Elmish.Debug
 open Elmish.HMR
 #endif
+
+module Search =
+    type State = { Url: string; Urls: string array }
+
+    type Msg =
+        | SetUrl of string
+        | AddUrl
+        | SetUrls of string array
+        | RemoveUrl of string
+
+    let init () =
+        { Urls = Array.empty; Url = "" }, Cmd.none
+
+    let generateUrlSearch (urls: string seq) =
+        match (urls |> String.concat ",") with
+        | "" -> "/"
+        | newUrl -> ("?url=" + newUrl)
+
+    let update (msg: Msg) (state: State) : State * Cmd<Msg> =
+        match msg with
+        | SetUrl(url: string) -> { state with Url = url }, Cmd.none
+        | AddUrl ->
+            let url = state.Url
+            let isUrlExists = state.Urls |> Array.exists (fun elm -> elm = url)
+
+            if url <> "" && not isUrlExists then
+                state, Array.append state.Urls [| url |] |> generateUrlSearch |> Navigation.newUrl
+            else
+                { state with Url = "" }, Cmd.none
+        | SetUrls(urls: string array) ->
+            { state with Url = ""; Urls = urls }, Navigation.newUrl (generateUrlSearch urls)
+        | RemoveUrl(url: string) ->
+            state,
+            state.Urls
+            |> Array.filter (fun elm -> elm <> url)
+            |> generateUrlSearch
+            |> Navigation.newUrl
+
+
+    let render (state: State) (dispatch: Msg -> unit) =
+        React.fragment
+            [ Html.div
+                  [ prop.className "w-full flex flex-wrap gap-3"
+                    prop.children[Daisy.input
+                                      [ input.bordered
+                                        prop.value state.Url
+                                        prop.onChange (SetUrl >> dispatch)
+                                        prop.className "flex-1"
+                                        prop.placeholder "https://overreacted.io/rss.xml" ]
+
+                                  Daisy.button.button
+                                      [ button.neutral; prop.onClick (fun _ -> dispatch AddUrl); prop.text "Add" ]] ]
+              Html.div
+                  [ prop.className "flex flex-wrap gap-3"
+                    prop.children
+                        [ yield!
+                              [ for url in state.Urls do
+                                    Html.div
+                                        [ (color.bgNeutral ++ (prop.className "p-1 rounded-lg flex gap-1"))
+                                          prop.children
+                                              [ Daisy.button.button
+                                                    [ button.error
+                                                      button.xs
+                                                      prop.onClick (fun _ -> dispatch (RemoveUrl url))
+                                                      prop.text "X" ]
+                                                Html.span [ color.textNeutralContent; prop.text url ] ] ] ] ] ] ]
 
 type ServerState =
     | Idle
@@ -33,10 +98,8 @@ type UserState =
       LoginError: string option
       User: User option }
 
-type SearchState = { Url: string; Urls: string array }
-
 type State =
-    { SearchState: SearchState
+    { Search: Search.State
       RssState: RSSState
       UserState: UserState
       LoginFormState: LoginForm }
@@ -48,9 +111,7 @@ type LoginFormField =
     | Password
 
 type Msg =
-    | UrlChanged of string
-    | SetUrlParam
-    | RemoveUrlParam of string
+    | SearchMsg of Search.Msg
     | SaveUrls
     | GotRSSList of RSS seq
     | RssErrorMsg of exn
@@ -85,21 +146,21 @@ let rpcStore =
     |> Remoting.withRouteBuilder Route.routeBuilder
     |> Remoting.buildProxy<IRPCStore>
 
-let getRSSList urls =
+let getRSSList (urls: string array) =
     async { return! rpcStore.getRSSList urls }
 
-let loginOrRegister loginForm =
+let loginOrRegister (loginForm: LoginForm) =
     async { return! rpcStore.loginOrRegister loginForm }
 
-let saveRSSUrlssss (userId, rssUrls) =
+let saveRSSUrlssss (userId: string, rssUrls: string array) =
     async { do! rpcStore.saveRSSUrls (userId, rssUrls) }
 
-let initLogin (sessionId) =
+let initLogin (sessionId: string) =
     async { return! rpcStore.initLogin sessionId }
 
 let route = oneOf [ map Search (top <?> stringParam "url") ]
 
-let getUrlSearch route =
+let getUrlSearch (route: BrowserRoute option) =
     match route with
     | Some(Search(query)) ->
         match query with
@@ -107,22 +168,18 @@ let getUrlSearch route =
         | None -> [||]
     | _ -> [||]
 
-let generateUrlSearch urls =
-    match (urls |> String.concat ",") with
-    | "" -> "/"
-    | newUrl -> ("?url=" + newUrl)
 
-let changeLoginFormState state fieldName value =
+let changeLoginFormState (state: LoginForm) (fieldName: LoginFormField) (value: string) =
     match fieldName with
     | Username -> { state with Username = value }
     | Password -> { state with Password = value }
 
-let cmdGetRssList urls =
+let cmdGetRssList (urls: string array) =
     match urls with
     | [||] -> Cmd.none
     | _ -> Cmd.OfAsync.either getRSSList urls GotRSSList RssErrorMsg
 
-let urlUpdate route state =
+let urlUpdate (route: BrowserRoute option) (state: State) =
     match route with
     | Some(Search(_)) ->
         let newUrls = (getUrlSearch route)
@@ -138,12 +195,12 @@ let urlUpdate route state =
                 ServerState = newServerState }
 
         let searchState =
-            { state.SearchState with
+            { state.Search with
                 Urls = newUrls
                 Url = "" }
 
         { state with
-            SearchState = searchState
+            Search = searchState
             RssState = rssState },
         cmdGetRssList newUrls
     | None ->
@@ -153,16 +210,16 @@ let urlUpdate route state =
                 RSSList = Seq.empty }
 
         let searchState =
-            { state.SearchState with
+            { state.Search with
                 Urls = Array.empty
                 Url = "" }
 
         { state with
-            SearchState = searchState
+            Search = searchState
             RssState = rssState },
         Cmd.none
 
-let init route =
+let init (route: BrowserRoute option) =
     let initUrls = getUrlSearch route
 
     let rssState =
@@ -172,7 +229,7 @@ let init route =
             | [||] -> Idle
             | _ -> Loading }
 
-    let searchState = { Urls = initUrls; Url = "" }
+    let searchState, searchCmd = Search.init ()
 
     let loginFormState = { Username = ""; Password = "" }
 
@@ -181,39 +238,21 @@ let init route =
           ServerState = Idle
           LoginError = None }
 
-    { SearchState = searchState
+    { Search = searchState
       RssState = rssState
       UserState = userState
       LoginFormState = loginFormState },
-    Cmd.batch [ cmdGetRssList initUrls; Cmd.ofMsg InitUser ]
+    Cmd.batch [ cmdGetRssList initUrls; Cmd.ofMsg InitUser; Cmd.map SearchMsg searchCmd ]
 
-let update msg state =
+let update (msg: Msg) (state: State) =
     match msg with
-    | UrlChanged url ->
-        let searchState = { state.SearchState with Url = url }
-        { state with SearchState = searchState }, Cmd.none
-    | SetUrlParam ->
-        let url = state.SearchState.Url
-        let isUrlExists = state.SearchState.Urls |> Array.exists (fun elm -> elm = url)
-
-        if url <> "" && not isUrlExists then
-            state,
-            Array.append state.SearchState.Urls [| url |]
-            |> generateUrlSearch
-            |> Navigation.newUrl
-        else
-            let searchState = { state.SearchState with Url = "" }
-            { state with SearchState = searchState }, Cmd.none
-    | RemoveUrlParam url ->
-        state,
-        state.SearchState.Urls
-        |> Array.filter (fun elm -> elm <> url)
-        |> generateUrlSearch
-        |> Navigation.newUrl
+    | SearchMsg(searchMsg: Search.Msg) ->
+        let nextSearchState, nextSearchCmd = Search.update searchMsg state.Search
+        { state with Search = nextSearchState }, Cmd.map SearchMsg nextSearchCmd
     | SaveUrls ->
         state,
         match state.UserState.User with
-        | Some user -> Cmd.OfAsync.attempt saveRSSUrlssss (user.UserId, state.SearchState.Urls) RssErrorMsg
+        | Some user -> Cmd.OfAsync.attempt saveRSSUrlssss (user.UserId, state.Search.Urls) RssErrorMsg
         | None -> Cmd.none
     | GotRSSList response ->
         { state with
@@ -266,15 +305,12 @@ let update msg state =
                   LoginError = None
                   User = Some newUser }
 
-            let newSearchState = { Url = ""; Urls = user.RssUrls }
-
             setSessionId user.SessionId
 
             { state with
                 LoginFormState = newLoginFormState
-                UserState = newUserState
-                SearchState = newSearchState },
-            Navigation.newUrl (generateUrlSearch user.RssUrls)
+                UserState = newUserState },
+            Cmd.ofMsg (SearchMsg(Search.Msg.SetUrls user.RssUrls))
         | None -> state, Cmd.none
     | UserErrorMsg e ->
         { state with
@@ -292,14 +328,14 @@ let update msg state =
                   LoginError = None } },
         Cmd.none
 
-let render state dispatch =
+let render (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
     Html.div
         [ prop.className "max-w-[768px] p-5 mx-auto flex flex-col gap-3"
           prop.children
               [ Daisy.navbar
                     [ prop.className "mb-2 shadow-lg bg-neutral text-neutral-content rounded-box"
                       prop.children
-                          [ Daisy.navbarStart [ Html.h1 [ prop.text "RSS Fetchr" ] ]
+                          [ Daisy.navbarStart [ Html.h1 [ prop.text "RSS Bookmarkr" ] ]
                             Daisy.navbarEnd
                                 [ match state.UserState.User with
                                   | Some _ ->
@@ -315,34 +351,9 @@ let render state dispatch =
                                             prop.htmlFor "login-modal"
                                             prop.text "Log In" ] ] ] ]
 
-                Html.div
-                    [ prop.className "w-full flex flex-wrap gap-3"
-                      prop.children[Daisy.input
-                                        [ input.bordered
-                                          prop.value state.SearchState.Url
-                                          prop.onChange (UrlChanged >> dispatch)
-                                          prop.className "flex-1"
-                                          prop.placeholder "https://overreacted.io/rss.xml" ]
+                Search.render state.Search (SearchMsg >> dispatch)
 
-                                    Daisy.button.button
-                                        [ button.neutral
-                                          prop.onClick (fun _ -> dispatch SetUrlParam)
-                                          prop.text "Add" ]] ]
-                Html.div
-                    [ prop.className "flex flex-wrap gap-3"
-                      prop.children
-                          [ yield!
-                                [ for url in state.SearchState.Urls do
-                                      Html.div
-                                          [ (color.bgNeutral ++ (prop.className "p-1 rounded-lg flex gap-1"))
-                                            prop.children
-                                                [ Daisy.button.button
-                                                      [ button.error
-                                                        button.xs
-                                                        prop.onClick (fun _ -> dispatch (RemoveUrlParam url))
-                                                        prop.text "X" ]
-                                                  Html.span [ color.textNeutralContent; prop.text url ] ] ] ] ] ]
-                if state.SearchState.Urls.Length <> 0 && state.UserState.User <> None then
+                if state.Search.Urls.Length <> 0 && state.UserState.User <> None then
                     Html.div
                         [ prop.className "flex flex-wrap gap-3"
                           prop.children
