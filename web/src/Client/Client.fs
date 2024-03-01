@@ -16,6 +16,45 @@ open Elmish.Debug
 open Elmish.HMR
 #endif
 
+type User = { UserId: string; SessionId: string }
+
+/// Copy from https://github.com/Dzoukr/Yobo/blob/master/src/Yobo.Client/TokenStorage.fs
+module Session =
+    let sessionKey = "session_id"
+
+    let tryGetSessionId () : string option =
+        Browser.WebStorage.localStorage.getItem (sessionKey)
+        |> (function
+        | null -> None
+        | x -> Some(x))
+        |> Option.bind (fun x -> if String.IsNullOrWhiteSpace(x) then None else Some x)
+
+    let removeSessionId () =
+        Browser.WebStorage.localStorage.removeItem (sessionKey)
+
+    let setSessionId (sessionId: string) =
+        if String.IsNullOrWhiteSpace(sessionId) then
+            removeSessionId ()
+        else
+            Browser.WebStorage.localStorage.setItem (sessionKey, sessionId)
+
+module RPC =
+    let store =
+        Remoting.createApi ()
+        |> Remoting.withRouteBuilder Route.routeBuilder
+        |> Remoting.buildProxy<IRPCStore>
+
+    let getRSSList (urls: string array) = async { return! store.getRSSList urls }
+
+    let loginOrRegister (loginForm: LoginForm) =
+        async { return! store.loginOrRegister loginForm }
+
+    let saveRSSUrlssss (userId: string, rssUrls: string array) =
+        async { do! store.saveRSSUrls (userId, rssUrls) }
+
+    let initLogin (sessionId: string) =
+        async { return! store.initLogin sessionId }
+
 module Search =
     type State = { Url: string; Urls: string array }
 
@@ -28,24 +67,30 @@ module Search =
     let init () =
         { Urls = Array.empty; Url = "" }, Cmd.none
 
-    let generateUrlSearch (urls: string seq) =
+    let generateUrlSearch (urls: string seq) : string =
         match (urls |> String.concat ",") with
         | "" -> "/"
         | newUrl -> ("?url=" + newUrl)
 
     let update (msg: Msg) (state: State) : State * Cmd<Msg> =
         match msg with
-        | SetUrl(url: string) -> { state with Url = url }, Cmd.none
+        | SetUrl(url: string) ->
+            let nextState = { state with Url = url }
+            nextState, Cmd.none
         | AddUrl ->
             let url = state.Url
             let isUrlExists = state.Urls |> Array.exists (fun elm -> elm = url)
 
-            if url <> "" && not isUrlExists then
-                state, Array.append state.Urls [| url |] |> generateUrlSearch |> Navigation.newUrl
-            else
-                { state with Url = "" }, Cmd.none
+            let nextState, nextCmd =
+                if url <> "" && not isUrlExists then
+                    state, Array.append state.Urls [| url |] |> generateUrlSearch |> Navigation.newUrl
+                else
+                    { state with Url = "" }, Cmd.none
+
+            nextState, nextCmd
         | SetUrls(urls: string array) ->
-            { state with Url = ""; Urls = urls }, Navigation.newUrl (generateUrlSearch urls)
+            let nextState = { state with Url = ""; Urls = urls }
+            nextState, Navigation.newUrl (generateUrlSearch urls)
         | RemoveUrl(url: string) ->
             state,
             state.Urls
@@ -54,7 +99,7 @@ module Search =
             |> Navigation.newUrl
 
 
-    let render (state: State) (dispatch: Msg -> unit) =
+    let render (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
         React.fragment
             [ Html.div
                   [ prop.className "w-full flex flex-wrap gap-3"
@@ -82,6 +127,129 @@ module Search =
                                                       prop.text "X" ]
                                                 Html.span [ color.textNeutralContent; prop.text url ] ] ] ] ] ] ]
 
+module Auth =
+    type State =
+        { InputUsername: string
+          InputPassword: string
+          LoggingIn: bool
+          LoginError: string option
+          User: User option }
+
+    type Msg =
+        | ChangeUsername of string
+        | ChangePassword of string
+        | Login
+        | LoginSuccess of LoginResponse option
+        | LoginFailed of error: string
+        | Logout
+
+    let init () =
+        { InputUsername = ""
+          InputPassword = ""
+          LoggingIn = false
+          LoginError = None
+          User = None },
+        Cmd.none
+
+    let update (msg: Msg) (state: State) =
+        match msg with
+        | ChangeUsername(username: string) ->
+            let nextState = { state with InputUsername = username }
+            nextState, Cmd.none
+        | ChangePassword(password: string) ->
+            let nextState = { state with InputPassword = password }
+            nextState, Cmd.none
+        | Login ->
+            let isFormFilled = state.InputUsername <> "" && state.InputPassword <> ""
+
+            if not isFormFilled then
+                state, Cmd.none
+            else
+                let nextState = { state with LoggingIn = true }
+
+                let credentials =
+                    { LoginForm.Username = state.InputUsername
+                      LoginForm.Password = state.InputPassword }
+
+                nextState,
+                Cmd.OfAsync.either RPC.loginOrRegister credentials LoginSuccess (fun ex -> LoginFailed ex.Message)
+        | LoginSuccess(loginResponse: LoginResponse option) ->
+            match loginResponse with
+            | Some(response: LoginResponse) ->
+                let user =
+                    { User.SessionId = response.SessionId
+                      User.UserId = response.UserId }
+
+                Session.setSessionId response.SessionId
+                let initState, _ = init ()
+                let nextState = { initState with User = Some user }
+                nextState, Cmd.none
+            | None -> state, Cmd.none
+        | LoginFailed(error: string) ->
+            let nextState = { state with LoginError = Some error }
+            nextState, Cmd.none
+        | Logout -> state, Cmd.none
+
+    let render (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
+        React.fragment
+            [ Daisy.navbar
+                  [ prop.className "mb-2 shadow-lg bg-neutral text-neutral-content rounded-box"
+                    prop.children
+                        [ Daisy.navbarStart [ Html.h1 [ prop.text "RSS Bookmarkr" ] ]
+                          Daisy.navbarEnd
+                              [ match state.User with
+                                | Some _ ->
+                                    Daisy.button.label
+                                        [ button.ghost
+                                          prop.key "logout-button"
+                                          prop.onClick (fun _ -> dispatch Logout)
+                                          prop.text "Log Out" ]
+                                | None ->
+                                    Daisy.button.label
+                                        [ button.ghost
+                                          prop.key "login-button"
+                                          prop.htmlFor "login-modal"
+                                          prop.text "Log In" ] ] ] ]
+              Html.div
+                  [ Daisy.modalToggle [ prop.id "login-modal" ]
+                    Daisy.modal.div
+                        [ prop.children
+                              [ Daisy.modalBox.div
+                                    [ Html.form
+                                          [ Html.h2 [ prop.text "Log In Form" ]
+                                            Daisy.formControl
+                                                [ Daisy.label
+                                                      [ prop.htmlFor "login-username-field"
+                                                        prop.children [ Daisy.labelText "Username" ] ]
+                                                  Daisy.input
+                                                      [ input.bordered
+                                                        prop.id "login-username-field"
+                                                        prop.placeholder "Username"
+                                                        prop.required true
+                                                        prop.value state.InputUsername
+                                                        prop.onChange (ChangeUsername >> dispatch) ] ]
+                                            Daisy.formControl
+                                                [ Daisy.label
+                                                      [ prop.htmlFor "password-username-field"
+                                                        prop.children [ Daisy.labelText "Password" ] ]
+                                                  Daisy.input
+                                                      [ input.bordered
+                                                        prop.id "password-username-field"
+                                                        prop.type' "password"
+                                                        prop.placeholder "******"
+                                                        prop.required true
+                                                        prop.value state.InputPassword
+                                                        prop.onChange (ChangePassword >> dispatch) ] ]
+                                            Html.p "Account will be automatically created if not exist."
+                                            Daisy.modalAction
+                                                [ Daisy.button.label [ prop.htmlFor "login-modal"; prop.text "Cancel" ]
+                                                  Daisy.button.label
+                                                      [ button.neutral
+                                                        prop.htmlFor "login-modal"
+                                                        prop.text "Log In"
+                                                        prop.type' "submit"
+                                                        prop.onClick (fun _ -> dispatch Login) ] ] ] ] ] ] ] ]
+
 type ServerState =
     | Idle
     | Loading
@@ -91,72 +259,20 @@ type RSSState =
     { ServerState: ServerState
       RSSList: RSS seq }
 
-type User = { UserId: string; SessionId: string }
-
-type UserState =
-    { ServerState: ServerState
-      LoginError: string option
-      User: User option }
-
 type State =
     { Search: Search.State
-      RssState: RSSState
-      UserState: UserState
-      LoginFormState: LoginForm }
+      Auth: Auth.State
+      RssState: RSSState }
 
 type BrowserRoute = Search of string option
 
-type LoginFormField =
-    | Username
-    | Password
-
 type Msg =
     | SearchMsg of Search.Msg
+    | AuthMsg of Auth.Msg
     | SaveUrls
     | GotRSSList of RSS seq
     | RssErrorMsg of exn
-    | SetLoginFormValue of (LoginFormField * string)
     | InitUser
-    | Login
-    | GotLogin of LoginResponse option
-    | UserErrorMsg of exn
-    | Logout
-
-/// Copy from https://github.com/Dzoukr/Yobo/blob/master/src/Yobo.Client/TokenStorage.fs
-let sessionKey = "session_id"
-
-let tryGetSessionId () : string option =
-    Browser.WebStorage.localStorage.getItem (sessionKey)
-    |> (function
-    | null -> None
-    | x -> Some(x))
-    |> Option.bind (fun x -> if String.IsNullOrWhiteSpace(x) then None else Some x)
-
-let removeSessionId () =
-    Browser.WebStorage.localStorage.removeItem (sessionKey)
-
-let setSessionId (sessionId: string) =
-    if String.IsNullOrWhiteSpace(sessionId) then
-        removeSessionId ()
-    else
-        Browser.WebStorage.localStorage.setItem (sessionKey, sessionId)
-
-let rpcStore =
-    Remoting.createApi ()
-    |> Remoting.withRouteBuilder Route.routeBuilder
-    |> Remoting.buildProxy<IRPCStore>
-
-let getRSSList (urls: string array) =
-    async { return! rpcStore.getRSSList urls }
-
-let loginOrRegister (loginForm: LoginForm) =
-    async { return! rpcStore.loginOrRegister loginForm }
-
-let saveRSSUrlssss (userId: string, rssUrls: string array) =
-    async { do! rpcStore.saveRSSUrls (userId, rssUrls) }
-
-let initLogin (sessionId: string) =
-    async { return! rpcStore.initLogin sessionId }
 
 let route = oneOf [ map Search (top <?> stringParam "url") ]
 
@@ -168,16 +284,10 @@ let getUrlSearch (route: BrowserRoute option) =
         | None -> [||]
     | _ -> [||]
 
-
-let changeLoginFormState (state: LoginForm) (fieldName: LoginFormField) (value: string) =
-    match fieldName with
-    | Username -> { state with Username = value }
-    | Password -> { state with Password = value }
-
 let cmdGetRssList (urls: string array) =
     match urls with
     | [||] -> Cmd.none
-    | _ -> Cmd.OfAsync.either getRSSList urls GotRSSList RssErrorMsg
+    | _ -> Cmd.OfAsync.either RPC.getRSSList urls GotRSSList RssErrorMsg
 
 let urlUpdate (route: BrowserRoute option) (state: State) =
     match route with
@@ -230,29 +340,67 @@ let init (route: BrowserRoute option) =
             | _ -> Loading }
 
     let searchState, searchCmd = Search.init ()
+    let authState, authCmd = Auth.init ()
 
-    let loginFormState = { Username = ""; Password = "" }
+    let initialModel =
+        { Search = searchState
+          Auth = authState
+          RssState = rssState }
 
-    let userState =
-        { User = None
-          ServerState = Idle
-          LoginError = None }
+    let initialCmd =
+        Cmd.batch
+            [ Cmd.map SearchMsg searchCmd
+              Cmd.map AuthMsg authCmd
+              cmdGetRssList initUrls
+              Cmd.ofMsg InitUser ]
 
-    { Search = searchState
-      RssState = rssState
-      UserState = userState
-      LoginFormState = loginFormState },
-    Cmd.batch [ cmdGetRssList initUrls; Cmd.ofMsg InitUser; Cmd.map SearchMsg searchCmd ]
+    initialModel, initialCmd
 
 let update (msg: Msg) (state: State) =
     match msg with
     | SearchMsg(searchMsg: Search.Msg) ->
         let nextSearchState, nextSearchCmd = Search.update searchMsg state.Search
-        { state with Search = nextSearchState }, Cmd.map SearchMsg nextSearchCmd
+        let nextState = { state with Search = nextSearchState }
+        nextState, Cmd.map SearchMsg nextSearchCmd
+    | AuthMsg(authMsg: Auth.Msg) ->
+        match authMsg with
+        | Auth.LoginSuccess(loginResponse: LoginResponse option) ->
+            match loginResponse with
+            | Some(loginResponse: LoginResponse) ->
+                let nextAuthState, nextAuthCmd = Auth.update authMsg state.Auth
+                let nextState = { state with Auth = nextAuthState }
+
+                nextState,
+                Cmd.batch
+                    [ Cmd.map AuthMsg nextAuthCmd
+                      Cmd.ofMsg (SearchMsg(Search.Msg.SetUrls loginResponse.RssUrls)) ]
+            | None -> state, Cmd.none
+        | Auth.Logout ->
+            Session.removeSessionId ()
+            let searchState, _ = Search.init ()
+            let authState, _ = Auth.init ()
+
+            let nextState =
+                { State.Search = searchState
+                  State.Auth = authState
+                  RssState =
+                    { RSSList = Seq.empty
+                      ServerState = Idle } }
+
+            nextState, Cmd.none
+        | _ ->
+            let nextAuthState, nextAuthCmd = Auth.update authMsg state.Auth
+            let nextState = { state with Auth = nextAuthState }
+            nextState, Cmd.map AuthMsg nextAuthCmd
+    | InitUser ->
+        match Session.tryGetSessionId () with
+        | None -> state, Cmd.none
+        | Some sessionId ->
+            state, Cmd.OfAsync.either RPC.initLogin sessionId (Auth.Msg.LoginSuccess >> AuthMsg) RssErrorMsg
     | SaveUrls ->
         state,
-        match state.UserState.User with
-        | Some user -> Cmd.OfAsync.attempt saveRSSUrlssss (user.UserId, state.Search.Urls) RssErrorMsg
+        match state.Auth.User with
+        | Some user -> Cmd.OfAsync.attempt RPC.saveRSSUrlssss (user.UserId, state.Search.Urls) RssErrorMsg
         | None -> Cmd.none
     | GotRSSList response ->
         { state with
@@ -267,93 +415,17 @@ let update (msg: Msg) (state: State) =
                 { state.RssState with
                     ServerState = ServerError e.Message } },
         Cmd.none
-    | SetLoginFormValue(fieldName, value) ->
-        { state with
-            LoginFormState = changeLoginFormState state.LoginFormState fieldName value },
-        Cmd.none
-    | Login ->
-        let isFormFilled =
-            state.LoginFormState.Username <> "" && state.LoginFormState.Password <> ""
-
-        { state with
-            UserState =
-                if isFormFilled then
-                    { state.UserState with
-                        ServerState = Loading }
-                else
-                    { state.UserState with
-                        LoginError = Some "Fields are requried!" } },
-        if isFormFilled then
-            Cmd.OfAsync.either loginOrRegister state.LoginFormState GotLogin UserErrorMsg
-        else
-            Cmd.none
-    | InitUser ->
-        match tryGetSessionId () with
-        | None -> state, Cmd.none
-        | Some sessionId -> state, Cmd.OfAsync.either initLogin sessionId GotLogin UserErrorMsg
-    | GotLogin loginResponse ->
-        match loginResponse with
-        | Some user ->
-            let newLoginFormState = { Username = ""; Password = "" }
-
-            let newUser =
-                { UserId = user.UserId
-                  SessionId = user.SessionId }
-
-            let newUserState =
-                { ServerState = Idle
-                  LoginError = None
-                  User = Some newUser }
-
-            setSessionId user.SessionId
-
-            { state with
-                LoginFormState = newLoginFormState
-                UserState = newUserState },
-            Cmd.ofMsg (SearchMsg(Search.Msg.SetUrls user.RssUrls))
-        | None -> state, Cmd.none
-    | UserErrorMsg e ->
-        { state with
-            RssState =
-                { state.RssState with
-                    ServerState = ServerError e.Message } },
-        Cmd.none
-    | Logout ->
-        removeSessionId ()
-
-        { state with
-            UserState =
-                { User = None
-                  ServerState = Idle
-                  LoginError = None } },
-        Cmd.none
 
 let render (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
     Html.div
         [ prop.className "max-w-[768px] p-5 mx-auto flex flex-col gap-3"
           prop.children
-              [ Daisy.navbar
-                    [ prop.className "mb-2 shadow-lg bg-neutral text-neutral-content rounded-box"
-                      prop.children
-                          [ Daisy.navbarStart [ Html.h1 [ prop.text "RSS Bookmarkr" ] ]
-                            Daisy.navbarEnd
-                                [ match state.UserState.User with
-                                  | Some _ ->
-                                      Daisy.button.label
-                                          [ button.ghost
-                                            prop.key "logout-button"
-                                            prop.onClick (fun _ -> dispatch Logout)
-                                            prop.text "Log Out" ]
-                                  | None ->
-                                      Daisy.button.label
-                                          [ button.ghost
-                                            prop.key "login-button"
-                                            prop.htmlFor "login-modal"
-                                            prop.text "Log In" ] ] ] ]
+              [
 
+                Auth.render state.Auth (AuthMsg >> dispatch)
                 Search.render state.Search (SearchMsg >> dispatch)
 
-                if state.Search.Urls.Length <> 0 && state.UserState.User <> None then
+                if state.Search.Urls.Length <> 0 && state.Auth.User <> None then
                     Html.div
                         [ prop.className "flex flex-wrap gap-3"
                           prop.children
@@ -392,51 +464,9 @@ let render (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
                                                                         prop.text "Read" ] ] ] ] ] ]
                             | ServerError errorMsg -> Daisy.alert [ alert.error; prop.text errorMsg ]
 
-                            match state.UserState.LoginError with
+                            match state.Auth.LoginError with
                             | Some errorMsg -> Daisy.alert [ alert.error; prop.text errorMsg ]
-                            | None -> () ] ]
-                Html.div
-                    [ Daisy.modalToggle [ prop.id "login-modal" ]
-                      Daisy.modal.div
-                          [ prop.children
-                                [ Daisy.modalBox.div
-                                      [ Html.form
-                                            [ Html.h2 [ prop.text "Log In Form" ]
-                                              Daisy.formControl
-                                                  [ Daisy.label
-                                                        [ prop.htmlFor "login-username-field"
-                                                          prop.children [ Daisy.labelText "Username" ] ]
-                                                    Daisy.input
-                                                        [ input.bordered
-                                                          prop.id "login-username-field"
-                                                          prop.placeholder "Username"
-                                                          prop.required true
-                                                          prop.value state.LoginFormState.Username
-                                                          prop.onChange (fun value ->
-                                                              dispatch (SetLoginFormValue(Username, value))) ] ]
-                                              Daisy.formControl
-                                                  [ Daisy.label
-                                                        [ prop.htmlFor "password-username-field"
-                                                          prop.children [ Daisy.labelText "Password" ] ]
-                                                    Daisy.input
-                                                        [ input.bordered
-                                                          prop.id "password-username-field"
-                                                          prop.type' "password"
-                                                          prop.placeholder "******"
-                                                          prop.required true
-                                                          prop.value state.LoginFormState.Password
-                                                          prop.onChange (fun value ->
-                                                              dispatch (SetLoginFormValue(Password, value))) ] ]
-                                              Html.p "Account will be automatically created if not exist."
-                                              Daisy.modalAction
-                                                  [ Daisy.button.label
-                                                        [ prop.htmlFor "login-modal"; prop.text "Cancel" ]
-                                                    Daisy.button.label
-                                                        [ button.neutral
-                                                          prop.htmlFor "login-modal"
-                                                          prop.text "Log In"
-                                                          prop.type' "submit"
-                                                          prop.onClick (fun _ -> dispatch Login) ] ] ] ] ] ] ] ] ]
+                            | None -> () ] ] ] ]
 
 Program.mkProgram init update render
 |> Program.toNavigable (parsePath route) urlUpdate
