@@ -371,14 +371,14 @@ type State =
       Auth: Auth.State
       RSS: RSS.State }
 
-type BrowserRoute = Search of string option
-
 type Msg =
     | SearchMsg of Search.Msg
     | AuthMsg of Auth.Msg
     | RSSMsg of RSS.Msg
     | InitUser
     | InitRSS of urls: string array
+
+type BrowserRoute = Search of string option
 
 let route = oneOf [ map Search (top <?> stringParam "url") ]
 
@@ -492,7 +492,7 @@ let render (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
 
 Program.mkProgram init update render
 |> Program.toNavigable (parsePath route) urlUpdate
-|> Program.withReactSynchronous "elmish-app"
+|> Program.withReactBatched "elmish-app"
 #if DEBUG
 |> Program.withDebugger
 #endif
