@@ -84,6 +84,14 @@ module DataAccess =
                           "@user_id", Sql.text userId ]) ] ]
         |> ignore
 
+    let deleteUrls (connectionString: string) (userId: string) (urls: string array) =
+        connectionString
+        |> Sql.connect
+        |> Sql.query "DELETE FROM rss_urls WHERE user_id = @user_id AND url = ANY(@urls)"
+        |> Sql.parameters [ "@user_id", Sql.text userId; "@urls", Sql.stringArray urls ]
+        |> Sql.executeNonQuery
+        |> ignore
+
     let insertSession (connectionString: string) (userId: string) (sessionId: string) =
         connectionString
         |> Sql.connect
@@ -163,10 +171,14 @@ module Handler =
             let newUrls =
                 urls |> Array.filter (fun url -> not <| Array.contains url existingUrls)
 
-            if newUrls.Length = 0 then
-                ()
+            let deletedUrls =
+                existingUrls |> Array.filter (fun url -> not <| Array.contains url urls)
 
-            DataAccess.insertUrls connectionString userId newUrls
+            if newUrls.Length <> 0 then
+                DataAccess.insertUrls connectionString userId newUrls
+
+            if deletedUrls.Length <> 0 then
+                DataAccess.deleteUrls connectionString userId deletedUrls
         }
 
     let initLogin (connectionString: string) (sessionId: string) : LoginResponse Async =
