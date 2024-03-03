@@ -64,12 +64,19 @@ module Component =
                   prop.children [ Daisy.alert [ alert.error; prop.text error ] ] ]
         | None -> React.fragment []
 
-module Search =
+module RSS =
+
+    type ServerState =
+        | Idle
+        | Loading
+        | Error of exn option
 
     type State =
         { Url: string
           Urls: string array
-          Error: string option }
+          Error: string option
+          ServerState: ServerState
+          RSSList: RSS seq }
 
     type Msg =
         | SetUrl of string
@@ -78,11 +85,15 @@ module Search =
         | RemoveUrl of string
         | SaveUrls
         | SetError of error: string option
+        | GetRSSList of urls: string array
+        | GotRSSList of RSS seq
 
     let init () =
         { State.Urls = Array.empty
           State.Url = ""
-          Error = None },
+          Error = None
+          State.RSSList = Seq.empty
+          State.ServerState = Idle },
         Cmd.none
 
     let generateUrlSearch (urls: string seq) : string =
@@ -107,8 +118,14 @@ module Search =
 
             nextState, nextCmd
         | SetUrls(urls: string array) ->
+            let urlsString = (generateUrlSearch urls)
+
             let nextState = { state with Url = ""; Urls = urls }
-            nextState, Navigation.newUrl (generateUrlSearch urls)
+
+            let nextCmd =
+                Cmd.batch [ Navigation.newUrl urlsString; Cmd.ofMsg (GetRSSList urls) ]
+
+            nextState, nextCmd
         | RemoveUrl(url: string) ->
             state,
             state.Urls
@@ -122,6 +139,24 @@ module Search =
                 let ofError = fun (ex: exn) -> Some ex.Message |> SetError
                 Cmd.OfAsync.attempt RPC.saveRSSUrlssss (user.UserId, state.Urls) ofError
             | None -> Cmd.none
+        | GetRSSList(urls: string array) ->
+            match urls with
+            | [||] ->
+                let nextState =
+                    { state with
+                        ServerState = Idle
+                        RSSList = Seq.empty }
+
+                (nextState, Cmd.none)
+            | _ ->
+                let nextState = { state with ServerState = Loading }
+                let ofError = fun (ex: exn) -> Some ex.Message |> SetError
+                nextState, Cmd.OfAsync.either RPC.getRSSList urls GotRSSList ofError
+        | GotRSSList(rssList: RSS seq) ->
+            { state with
+                ServerState = Idle
+                RSSList = rssList },
+            Cmd.none
         | SetError(error: string option) ->
             let nextState = { state with Error = error }
             nextState, Cmd.none
@@ -161,7 +196,41 @@ module Search =
                                   [ button.link
                                     prop.onClick (fun _ -> dispatch SaveUrls)
                                     prop.text "Save Urls" ] ] ]
-              Component.renderError state.Error ]
+              Component.renderError state.Error
+
+              Html.div
+                  [ prop.className "flex flex-col gap-3"
+                    prop.children
+                        [ match state.ServerState with
+                          | Loading ->
+                              yield!
+                                  [ for _ in 0..5 do
+                                        Daisy.card
+                                            [ card.bordered
+                                              prop.className "flex flex-col gap-3 p-8"
+                                              prop.children
+                                                  [ Daisy.skeleton [ prop.className "h-6 w-full" ]
+                                                    Daisy.skeleton [ prop.className "h-4 w-1/2" ]
+                                                    Daisy.skeleton [ prop.className "h-4 w-1/4" ] ] ] ]
+                          | Idle ->
+                              yield!
+                                  [ for rss in state.RSSList do
+                                        Daisy.card
+                                            [ card.bordered
+                                              prop.children
+                                                  [ Daisy.cardBody
+                                                        [ Daisy.cardTitle rss.Title
+                                                          Html.p (rss.LastUpdatedTime.ToString())
+                                                          Daisy.cardActions
+                                                              [ Daisy.link
+                                                                    [ prop.href rss.Link
+                                                                      prop.target "_blank"
+                                                                      prop.rel "noopener"
+                                                                      prop.text "Read" ] ] ] ] ] ]
+                          | Error(error: exn option) ->
+                              match error with
+                              | Some(error: exn) -> Component.renderError (Some error.Message)
+                              | None -> () ] ] ]
 
 module Auth =
 
@@ -297,135 +366,51 @@ module Auth =
                                                         prop.onClick (fun _ -> dispatch Login) ] ] ] ] ] ] ]
               Component.renderError state.Error ]
 
-module RSS =
-
-    type ServerState =
-        | Idle
-        | Loading
-        | Error of exn option
-
-    type State =
-        { ServerState: ServerState
-          RSSList: RSS seq }
-
-    type Msg =
-        | GetRSSList of urls: string array
-        | GotRSSList of RSS seq
-        | SetError of error: string option
-
-    let init () =
-        { State.RSSList = Seq.empty
-          State.ServerState = Idle },
-        Cmd.none
-
-    let update (msg: Msg) (state: State) =
-        match msg with
-        | GetRSSList(urls: string array) ->
-            match urls with
-            | [||] ->
-                let nextState =
-                    { state with
-                        ServerState = Idle
-                        RSSList = Seq.empty }
-
-                (nextState, Cmd.none)
-            | _ ->
-                let nextState = { state with ServerState = Loading }
-                let ofError = fun (ex: exn) -> Some ex.Message |> SetError
-                nextState, Cmd.OfAsync.either RPC.getRSSList urls GotRSSList ofError
-        | GotRSSList(rssList: RSS seq) ->
-            { state with
-                ServerState = Idle
-                RSSList = rssList },
-            Cmd.none
-        | SetError(_: string option) -> state, Cmd.none
-
-    let view (state: State) : Fable.React.ReactElement =
-        Html.div
-            [ prop.className "flex flex-col gap-3"
-              prop.children
-                  [ match state.ServerState with
-                    | Loading ->
-                        yield!
-                            [ for _ in 0..5 do
-                                  Daisy.card
-                                      [ card.bordered
-                                        prop.className "flex flex-col gap-3 p-8"
-                                        prop.children
-                                            [ Daisy.skeleton [ prop.className "h-6 w-full" ]
-                                              Daisy.skeleton [ prop.className "h-4 w-1/2" ]
-                                              Daisy.skeleton [ prop.className "h-4 w-1/4" ] ] ] ]
-                    | Idle ->
-                        yield!
-                            [ for rss in state.RSSList do
-                                  Daisy.card
-                                      [ card.bordered
-                                        prop.children
-                                            [ Daisy.cardBody
-                                                  [ Daisy.cardTitle rss.Title
-                                                    Html.p (rss.LastUpdatedTime.ToString())
-                                                    Daisy.cardActions
-                                                        [ Daisy.link
-                                                              [ prop.href rss.Link
-                                                                prop.target "_blank"
-                                                                prop.rel "noopener"
-                                                                prop.text "Read" ] ] ] ] ] ]
-                    | Error(error: exn option) ->
-                        match error with
-                        | Some(error: exn) -> Component.renderError (Some error.Message)
-                        | None -> () ] ]
 
 type State =
     { User: User option
-      Search: Search.State
-      Auth: Auth.State
-      RSS: RSS.State }
+      RSS: RSS.State
+      Auth: Auth.State }
 
 type Msg =
-    | SearchMsg of Search.Msg
-    | AuthMsg of Auth.Msg
     | RSSMsg of RSS.Msg
-    | InitRSS of urls: string array
+    | AuthMsg of Auth.Msg
 
 type BrowserRoute = Search of string option
 
 let route = oneOf [ map Search (top <?> stringParam "url") ]
 
-let getUrlSearch (route: BrowserRoute option) =
+let urlUpdate (route: BrowserRoute option) (state: State) =
+    state,
     match route with
     | Some(Search(query: string option)) ->
         match query with
         | Some query -> query.Split [| ',' |] |> Array.distinct
         | None -> [||]
-    | _ -> [||]
-
-let urlUpdate (route: BrowserRoute option) (state: State) =
-    match route with
-    | Some(Search(_: string option)) -> state, route |> (getUrlSearch) |> InitRSS |> Cmd.ofMsg
-    | None -> state, [||] |> InitRSS |> Cmd.ofMsg
+    | None -> [||]
+    |> RSS.Msg.SetUrls
+    |> RSSMsg
+    |> Cmd.ofMsg
 
 let init (_: BrowserRoute option) =
     let rssState, rssCmd = RSS.init ()
-    let searchState, searchCmd = Search.init ()
     let authState, authCmd = Auth.init ()
 
     let initialModel =
         { User = None
-          Search = searchState
-          Auth = authState
-          RSS = rssState }
+          RSS = rssState
+          Auth = authState }
 
-    let initialCmd =
-        Cmd.batch [ Cmd.map SearchMsg searchCmd; Cmd.map AuthMsg authCmd; Cmd.map RSSMsg rssCmd ]
+    let initialCmd = Cmd.batch [ Cmd.map RSSMsg rssCmd; Cmd.map AuthMsg authCmd ]
 
     initialModel, initialCmd
 
 let update (msg: Msg) (state: State) =
     match msg with
-    | SearchMsg(searchMsg: Search.Msg) ->
-        let nextSearchState, nextSearchCmd = Search.update state.User searchMsg state.Search
-        let nextState = { state with Search = nextSearchState }
-        nextState, Cmd.map SearchMsg nextSearchCmd
+    | RSSMsg(rssMsg: RSS.Msg) ->
+        let nextRSSState, nextRSSCmd = RSS.update state.User rssMsg state.RSS
+        let nextState = { state with RSS = nextRSSState }
+        nextState, Cmd.map RSSMsg nextRSSCmd
     | AuthMsg(authMsg: Auth.Msg) ->
         match authMsg with
         | Auth.LoginSuccess(loginResult: LoginResult option) ->
@@ -444,7 +429,7 @@ let update (msg: Msg) (state: State) =
                         Auth = authState
                         State.User = Some user }
 
-                nextState, loginResult.RssUrls |> Search.Msg.SetUrls |> SearchMsg |> Cmd.ofMsg
+                nextState, loginResult.RssUrls |> RSS.Msg.SetUrls |> RSSMsg |> Cmd.ofMsg
             | None -> state, Cmd.none
         | Auth.Logout ->
             Session.removeSessionId ()
@@ -460,17 +445,6 @@ let update (msg: Msg) (state: State) =
             let nextAuthState, nextAuthCmd = Auth.update authMsg state.Auth
             let nextState = { state with Auth = nextAuthState }
             nextState, Cmd.map AuthMsg nextAuthCmd
-    | RSSMsg(rssMsg: RSS.Msg) ->
-        let nextRSSState, nextRSSCmd = RSS.update rssMsg state.RSS
-        let nextState = { state with RSS = nextRSSState }
-        nextState, Cmd.map RSSMsg nextRSSCmd
-    | InitRSS(urls: string array) ->
-        let nextCmd =
-            Cmd.batch
-                [ urls |> Search.Msg.SetUrls |> SearchMsg |> Cmd.ofMsg
-                  urls |> RSS.Msg.GetRSSList |> RSSMsg |> Cmd.ofMsg ]
-
-        state, nextCmd
 
 let render (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
     let isLoggedIn = state.User <> None
@@ -479,8 +453,7 @@ let render (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
         [ prop.className "max-w-[768px] p-5 mx-auto flex flex-col gap-3"
           prop.children
               [ Auth.render isLoggedIn state.Auth (AuthMsg >> dispatch)
-                Search.render isLoggedIn state.Search (SearchMsg >> dispatch)
-                RSS.view state.RSS ] ]
+                RSS.render isLoggedIn state.RSS (RSSMsg >> dispatch) ] ]
 
 Program.mkProgram init update render
 |> Program.toNavigable (parsePath route) urlUpdate
