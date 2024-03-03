@@ -115,33 +115,42 @@ let getRSSList (urls: string array) =
             |> Seq.sortByDescending (fun rss -> rss.LastUpdatedTime)
     }
 
-let loginOrRegister loginForm =
+let register (sessionId: string) (loginForm: LoginForm) : LoginResponse =
+    let userId = (insertUser loginForm)
+
+    let loginResult =
+        { LoginResult.UserId = userId
+          LoginResult.RssUrls = Array.empty
+          LoginResult.SessionId = sessionId }
+
+    Success loginResult
+
+let login (sessionId: string) (loginForm: LoginForm) (user: User) : LoginResponse =
+    if user.Password = loginForm.Password then
+        let loginResult =
+            { LoginResult.UserId = user.Id
+              LoginResult.RssUrls = (getRSSUrls user.Id) |> List.toArray
+              LoginResult.SessionId = sessionId }
+
+        Success loginResult
+    else
+        let loginError = { LoginError.Message = "Password not match." }
+        Failed loginError
+
+let loginOrRegister (loginForm: LoginForm) : LoginResponse Async =
     async {
         let sessionId = Guid.NewGuid().ToString()
 
-        let user =
+        let loginResponse =
             match getUser loginForm with
-            | None ->
-                Some(
-                    { UserId = (insertUser loginForm)
-                      RssUrls = Array.empty
-                      SessionId = sessionId }
-                )
-            | Some user ->
-                if user.Password = loginForm.Password then
-                    Some(
-                        { UserId = user.Id
-                          RssUrls = (getRSSUrls user.Id) |> List.toArray
-                          SessionId = sessionId }
-                    )
-                else
-                    None
+            | None -> register sessionId loginForm
+            | Some user -> login sessionId loginForm user
 
-        match user with
-        | None -> ()
-        | Some user -> insertSession user.UserId sessionId
+        match loginResponse with
+        | Success(user: LoginResult) -> insertSession user.UserId sessionId
+        | _ -> ()
 
-        return user
+        return loginResponse
     }
 
 let saveRSSUrls (userId: string, urls: string array) =
@@ -157,19 +166,22 @@ let saveRSSUrls (userId: string, urls: string array) =
         insertUrls userId newUrls
     }
 
-let initLogin (sessionId: string) =
+let initLogin (sessionId: string) : LoginResponse Async =
     async {
         return
             sessionId
             |> getUserSession
             |> (function
-            | None -> None
-            | Some user ->
-                Some(
-                    { UserId = user.Id
-                      RssUrls = (getRSSUrls user.Id) |> List.toArray
-                      SessionId = sessionId }
-                ))
+            | None ->
+                let loginError = { LoginError.Message = "Session invalid." }
+                Failed loginError
+            | Some(user: User) ->
+                let loginResult =
+                    { LoginResult.UserId = user.Id
+                      LoginResult.RssUrls = (getRSSUrls user.Id) |> List.toArray
+                      LoginResult.SessionId = sessionId }
+
+                Success loginResult)
     }
 
 let rpcStore =

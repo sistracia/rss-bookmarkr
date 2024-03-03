@@ -1,4 +1,4 @@
-module App
+﻿module App
 
 open System
 open Feliz
@@ -44,24 +44,24 @@ module RPC =
         |> Remoting.withRouteBuilder Route.routeBuilder
         |> Remoting.buildProxy<IRPCStore>
 
-    let getRSSList (urls: string array) = async { return! store.getRSSList urls }
+    let getRSSList (urls: string array) : Async<RSS seq> = async { return! store.getRSSList urls }
 
-    let loginOrRegister (loginForm: LoginForm) =
+    let loginOrRegister (loginForm: LoginForm) : LoginResponse Async =
         async { return! store.loginOrRegister loginForm }
 
-    let saveRSSUrlssss (userId: string, rssUrls: string array) =
+    let saveRSSUrlssss (userId: string, rssUrls: string array) : unit Async =
         async { do! store.saveRSSUrls (userId, rssUrls) }
 
-    let initLogin (sessionId: string) =
+    let initLogin (sessionId: string) : LoginResponse Async =
         async { return! store.initLogin sessionId }
 
 module Component =
-    let renderError (error: exn option) : Fable.React.ReactElement =
+    let renderError (error: string option) : Fable.React.ReactElement =
         match error with
-        | Some(error: exn) ->
+        | Some(error: string) ->
             Daisy.toast
                 [ prop.style [ style.zIndex 1 ]
-                  prop.children [ Daisy.alert [ alert.error; prop.text error.Message ] ] ]
+                  prop.children [ Daisy.alert [ alert.error; prop.text error ] ] ]
         | None -> React.fragment []
 
 module Search =
@@ -69,7 +69,7 @@ module Search =
     type State =
         { Url: string
           Urls: string array
-          Error: exn option }
+          Error: string option }
 
     type Msg =
         | SetUrl of string
@@ -77,7 +77,7 @@ module Search =
         | SetUrls of string array
         | RemoveUrl of string
         | SaveUrls
-        | SetError of error: exn option
+        | SetError of error: string option
 
     let init () =
         { State.Urls = Array.empty
@@ -118,9 +118,11 @@ module Search =
         | SaveUrls ->
             state,
             match user with
-            | Some(user: User) -> Cmd.OfAsync.attempt RPC.saveRSSUrlssss (user.UserId, state.Urls) (Some >> SetError)
+            | Some(user: User) ->
+                let ofError = fun (ex: exn) -> Some ex.Message |> SetError
+                Cmd.OfAsync.attempt RPC.saveRSSUrlssss (user.UserId, state.Urls) ofError
             | None -> Cmd.none
-        | SetError(error: exn option) ->
+        | SetError(error: string option) ->
             let nextState = { state with Error = error }
             nextState, Cmd.none
 
@@ -167,14 +169,15 @@ module Auth =
         { InputUsername: string
           InputPassword: string
           LoggingIn: bool
-          Error: exn option }
+          Error: string option }
 
     type Msg =
         | ChangeUsername of string
         | ChangePassword of string
         | Login
-        | LoginSuccess of LoginResponse option
-        | SetError of error: exn option
+        | InitUser
+        | LoginSuccess of LoginResult option
+        | SetError of error: string option
         | Logout
 
     let init () =
@@ -182,7 +185,7 @@ module Auth =
           State.InputPassword = ""
           State.LoggingIn = false
           Error = None },
-        Cmd.none
+        InitUser |> Cmd.ofMsg
 
     let update (msg: Msg) (state: State) =
         match msg with
@@ -204,15 +207,33 @@ module Auth =
                     { LoginForm.Username = state.InputUsername
                       LoginForm.Password = state.InputPassword }
 
-                nextState, Cmd.OfAsync.either RPC.loginOrRegister credentials LoginSuccess (Some >> SetError)
-        | SetError(error: exn option) ->
+                let ofSuccess =
+                    function
+                    | Success(loginResult: LoginResult) -> Some loginResult |> LoginSuccess
+                    | Failed(_: LoginError) -> Some "The password you entered is incorrect." |> SetError
+
+                let ofError = (fun (ex: exn) -> Some ex.Message |> SetError)
+
+                nextState, Cmd.OfAsync.either RPC.loginOrRegister credentials ofSuccess ofError
+        | InitUser ->
+            match Session.tryGetSessionId () with
+            | None -> state, Cmd.none
+            | Some sessionId ->
+                let ofSuccess =
+                    function
+                    | Success(loginResult: LoginResult) -> Some loginResult |> LoginSuccess
+                    | _ -> Some "Failed to login account." |> SetError
+
+                let ofError = (fun (ex: exn) -> Some ex.Message |> SetError)
+                state, Cmd.OfAsync.either RPC.initLogin sessionId ofSuccess ofError
+        | SetError(error: string option) ->
             let nextState =
                 { state with
                     LoggingIn = false
                     Error = error }
 
             nextState, Cmd.none
-        | LoginSuccess(_: LoginResponse option) -> state, Cmd.none
+        | LoginSuccess(_: LoginResult option) -> state, Cmd.none
         | Logout -> state, Cmd.none
 
     let render (isLoggedIn: bool) (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
@@ -290,7 +311,7 @@ module RSS =
     type Msg =
         | GetRSSList of urls: string array
         | GotRSSList of RSS seq
-        | SetError of error: exn option
+        | SetError of error: string option
 
     let init () =
         { State.RSSList = Seq.empty
@@ -310,14 +331,14 @@ module RSS =
                 (nextState, Cmd.none)
             | _ ->
                 let nextState = { state with ServerState = Loading }
-
-                (nextState, Cmd.OfAsync.either RPC.getRSSList urls GotRSSList (Some >> SetError))
+                let ofError = fun (ex: exn) -> Some ex.Message |> SetError
+                nextState, Cmd.OfAsync.either RPC.getRSSList urls GotRSSList ofError
         | GotRSSList(rssList: RSS seq) ->
             { state with
                 ServerState = Idle
                 RSSList = rssList },
             Cmd.none
-        | SetError(_: exn option) -> state, Cmd.none
+        | SetError(_: string option) -> state, Cmd.none
 
     let view (state: State) : Fable.React.ReactElement =
         Html.div
@@ -349,7 +370,10 @@ module RSS =
                                                                 prop.target "_blank"
                                                                 prop.rel "noopener"
                                                                 prop.text "Read" ] ] ] ] ] ]
-                    | Error(error: exn option) -> Component.renderError error ] ]
+                    | Error(error: exn option) ->
+                        match error with
+                        | Some(error: exn) -> Component.renderError (Some error.Message)
+                        | None -> () ] ]
 
 type State =
     { User: User option
@@ -361,7 +385,6 @@ type Msg =
     | SearchMsg of Search.Msg
     | AuthMsg of Auth.Msg
     | RSSMsg of RSS.Msg
-    | InitUser
     | InitRSS of urls: string array
 
 type BrowserRoute = Search of string option
@@ -381,9 +404,7 @@ let urlUpdate (route: BrowserRoute option) (state: State) =
     | Some(Search(_: string option)) -> state, route |> (getUrlSearch) |> InitRSS |> Cmd.ofMsg
     | None -> state, [||] |> InitRSS |> Cmd.ofMsg
 
-let init (route: BrowserRoute option) =
-    let initUrls = getUrlSearch route
-
+let init (_: BrowserRoute option) =
     let rssState, rssCmd = RSS.init ()
     let searchState, searchCmd = Search.init ()
     let authState, authCmd = Auth.init ()
@@ -395,12 +416,7 @@ let init (route: BrowserRoute option) =
           RSS = rssState }
 
     let initialCmd =
-        Cmd.batch
-            [ Cmd.map SearchMsg searchCmd
-              Cmd.map AuthMsg authCmd
-              Cmd.map RSSMsg rssCmd
-              InitUser |> Cmd.ofMsg
-              initUrls |> InitRSS |> Cmd.ofMsg ]
+        Cmd.batch [ Cmd.map SearchMsg searchCmd; Cmd.map AuthMsg authCmd; Cmd.map RSSMsg rssCmd ]
 
     initialModel, initialCmd
 
@@ -412,23 +428,23 @@ let update (msg: Msg) (state: State) =
         nextState, Cmd.map SearchMsg nextSearchCmd
     | AuthMsg(authMsg: Auth.Msg) ->
         match authMsg with
-        | Auth.LoginSuccess(loginResponse: LoginResponse option) ->
-            match loginResponse with
-            | Some(loginResponse: LoginResponse) ->
-                Session.setSessionId loginResponse.SessionId
+        | Auth.LoginSuccess(loginResult: LoginResult option) ->
+            match loginResult with
+            | Some(loginResult: LoginResult) ->
+                Session.setSessionId loginResult.SessionId
 
                 let authState, _ = Auth.init ()
 
                 let user =
-                    { User.SessionId = loginResponse.SessionId
-                      User.UserId = loginResponse.UserId }
+                    { User.SessionId = loginResult.SessionId
+                      User.UserId = loginResult.UserId }
 
                 let nextState =
                     { state with
                         Auth = authState
                         State.User = Some user }
 
-                nextState, loginResponse.RssUrls |> Search.Msg.SetUrls |> SearchMsg |> Cmd.ofMsg
+                nextState, loginResult.RssUrls |> Search.Msg.SetUrls |> SearchMsg |> Cmd.ofMsg
             | None -> state, Cmd.none
         | Auth.Logout ->
             Session.removeSessionId ()
@@ -448,13 +464,6 @@ let update (msg: Msg) (state: State) =
         let nextRSSState, nextRSSCmd = RSS.update rssMsg state.RSS
         let nextState = { state with RSS = nextRSSState }
         nextState, Cmd.map RSSMsg nextRSSCmd
-    | InitUser ->
-        match Session.tryGetSessionId () with
-        | None -> state, Cmd.none
-        | Some sessionId ->
-            let ofSuccess = (Auth.Msg.LoginSuccess >> AuthMsg)
-            let ofError = (fun (ex: exn) -> ex |> Some |> Auth.Msg.SetError |> AuthMsg)
-            state, Cmd.OfAsync.either RPC.initLogin sessionId ofSuccess ofError
     | InitRSS(urls: string array) ->
         let nextCmd =
             Cmd.batch
@@ -465,6 +474,7 @@ let update (msg: Msg) (state: State) =
 
 let render (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
     let isLoggedIn = state.User <> None
+
     Html.div
         [ prop.className "max-w-[768px] p-5 mx-auto flex flex-col gap-3"
           prop.children
@@ -476,6 +486,7 @@ Program.mkProgram init update render
 |> Program.toNavigable (parsePath route) urlUpdate
 |> Program.withReactBatched "elmish-app"
 #if DEBUG
+|> Program.withConsoleTrace
 |> Program.withDebugger
 #endif
 |> Program.run

@@ -12,16 +12,23 @@ type RSS =
 type LoginForm = { Username: string; Password: string }
 
 [<Struct>]
-type LoginResponse =
+type LoginResult =
     { UserId: string
       RssUrls: string array
       SessionId: string }
 
+[<Struct>]
+type LoginError = { Message: string }
+
+type LoginResponse =
+    | Success of result: LoginResult
+    | Failed of error: LoginError
+
 type IRPCStore =
     { getRSSList: string array -> RSS seq Async
-      loginOrRegister: LoginForm -> LoginResponse option Async
+      loginOrRegister: LoginForm -> LoginResponse Async
       saveRSSUrls: (string * string array) -> unit Async
-      initLogin: string -> LoginResponse option Async }
+      initLogin: string -> LoginResponse Async }
 
 module Route =
     let routeBuilder (typeName: string) (methodName: string) =
