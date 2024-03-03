@@ -1,4 +1,4 @@
-﻿module App
+module App
 
 open System
 open Feliz
@@ -124,7 +124,7 @@ module Search =
             let nextState = { state with Error = error }
             nextState, Cmd.none
 
-    let render (user: User option) (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
+    let render (isLoggedIn: bool) (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
         React.fragment
             [ Html.div
                   [ prop.className "w-full flex flex-wrap gap-3"
@@ -151,7 +151,7 @@ module Search =
                                                       prop.onClick (fun _ -> dispatch (RemoveUrl url))
                                                       prop.text "X" ]
                                                 Html.span [ color.textNeutralContent; prop.text url ] ] ] ] ] ]
-              if state.Urls.Length <> 0 && user <> None then
+              if state.Urls.Length <> 0 && isLoggedIn then
                   Html.div
                       [ prop.className "flex flex-wrap gap-3"
                         prop.children
@@ -167,7 +167,6 @@ module Auth =
         { InputUsername: string
           InputPassword: string
           LoggingIn: bool
-          LoggedIn: bool
           Error: exn option }
 
     type Msg =
@@ -182,7 +181,6 @@ module Auth =
         { State.InputUsername = ""
           State.InputPassword = ""
           State.LoggingIn = false
-          State.LoggedIn = false
           Error = None },
         Cmd.none
 
@@ -207,19 +205,6 @@ module Auth =
                       LoginForm.Password = state.InputPassword }
 
                 nextState, Cmd.OfAsync.either RPC.loginOrRegister credentials LoginSuccess (Some >> SetError)
-        | LoginSuccess(loginResponse: LoginResponse option) ->
-            match loginResponse with
-            | Some(_: LoginResponse) ->
-                let initState, _ = init ()
-
-                let nextState =
-                    { initState with
-                        LoggingIn = false
-                        LoggedIn = true
-                        Error = None }
-
-                nextState, Cmd.none
-            | None -> state, Cmd.none
         | SetError(error: exn option) ->
             let nextState =
                 { state with
@@ -227,16 +212,17 @@ module Auth =
                     Error = error }
 
             nextState, Cmd.none
+        | LoginSuccess(_: LoginResponse option) -> state, Cmd.none
         | Logout -> state, Cmd.none
 
-    let render (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
+    let render (isLoggedIn: bool) (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
         React.fragment
             [ Daisy.navbar
                   [ prop.className "mb-2 shadow-lg bg-neutral text-neutral-content rounded-box"
                     prop.children
                         [ Daisy.navbarStart [ Html.h1 [ prop.text "RSS Bookmarkr" ] ]
                           Daisy.navbarEnd
-                              [ match state.LoggedIn with
+                              [ match isLoggedIn with
                                 | true ->
                                     Daisy.button.label
                                         [ button.ghost
@@ -431,7 +417,7 @@ let update (msg: Msg) (state: State) =
             | Some(loginResponse: LoginResponse) ->
                 Session.setSessionId loginResponse.SessionId
 
-                let nextAuthState, nextAuthCmd = Auth.update authMsg state.Auth
+                let authState, _ = Auth.init ()
 
                 let user =
                     { User.SessionId = loginResponse.SessionId
@@ -439,15 +425,10 @@ let update (msg: Msg) (state: State) =
 
                 let nextState =
                     { state with
-                        Auth = nextAuthState
-                        User = Some user }
+                        Auth = authState
+                        State.User = Some user }
 
-                let nextCmd =
-                    Cmd.batch
-                        [ Cmd.map AuthMsg nextAuthCmd
-                          loginResponse.RssUrls |> Search.Msg.SetUrls |> SearchMsg |> Cmd.ofMsg ]
-
-                nextState, nextCmd
+                nextState, loginResponse.RssUrls |> Search.Msg.SetUrls |> SearchMsg |> Cmd.ofMsg
             | None -> state, Cmd.none
         | Auth.Logout ->
             Session.removeSessionId ()
@@ -455,8 +436,8 @@ let update (msg: Msg) (state: State) =
 
             let nextState =
                 { state with
-                    User = None
-                    State.Auth = authState }
+                    State.Auth = authState
+                    State.User = None }
 
             nextState, Cmd.none
         | _ ->
@@ -483,11 +464,12 @@ let update (msg: Msg) (state: State) =
         state, nextCmd
 
 let render (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
+    let isLoggedIn = state.User <> None
     Html.div
         [ prop.className "max-w-[768px] p-5 mx-auto flex flex-col gap-3"
           prop.children
-              [ Auth.render state.Auth (AuthMsg >> dispatch)
-                Search.render state.User state.Search (SearchMsg >> dispatch)
+              [ Auth.render isLoggedIn state.Auth (AuthMsg >> dispatch)
+                Search.render isLoggedIn state.Search (SearchMsg >> dispatch)
                 RSS.view state.RSS ] ]
 
 Program.mkProgram init update render
