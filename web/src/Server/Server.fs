@@ -1,13 +1,23 @@
 open System
-open Microsoft.AspNetCore.Http
-open Saturn
 open System.Xml
 open System.ServiceModel.Syndication
+open Microsoft.AspNetCore.Http
+open Microsoft.Extensions.Configuration
+open Saturn
 open Fable.Remoting.Server
 open Fable.Remoting.Giraffe
 open Npgsql.FSharp
 
 open Shared
+
+/// Ref: https://github.com/CompositionalIT/TodoService/blob/main/src/app/Todo.Api.fs
+type HttpContext with
+
+    /// The SQL connection string to the RSS database.
+    member this.RssDbConnectionString =
+        match this.GetService<IConfiguration>().GetConnectionString "RssDb" with
+        | null -> failwith "Missing connection string"
+        | v -> v
 
 type User =
     { Id: string
@@ -205,16 +215,16 @@ module Handler =
             return! rssList |> Controller.json ctx
         }
 
-let rpcStore =
-    { getRSSList = Handler.getRSSList
-      loginOrRegister = (Handler.loginOrRegister connectionString)
-      saveRSSUrls = (Handler.saveRSSUrls connectionString)
-      initLogin = (Handler.initLogin connectionString) }
+let rpcStore (ctx: HttpContext) =
+    { IRPCStore.getRSSList = Handler.getRSSList
+      IRPCStore.loginOrRegister = (Handler.loginOrRegister ctx.RssDbConnectionString)
+      IRPCStore.saveRSSUrls = (Handler.saveRSSUrls ctx.RssDbConnectionString)
+      IRPCStore.initLogin = (Handler.initLogin ctx.RssDbConnectionString) }
 
 let webApp =
     Remoting.createApi ()
     |> Remoting.withRouteBuilder Route.routeBuilder
-    |> Remoting.fromValue rpcStore
+    |> Remoting.fromContext rpcStore
     |> Remoting.buildHttpHandler
 
 module Router =
