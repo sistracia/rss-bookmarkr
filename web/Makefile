@@ -13,9 +13,6 @@ style:
 migrate_up:
 	dotnet migrondi up --dry-run false
 
-migrate_down:
-	dotnet migrondi down --dry-run false
-
 publish_client:
 	dotnet fable --noCache --cwd src/Client -o output
 
