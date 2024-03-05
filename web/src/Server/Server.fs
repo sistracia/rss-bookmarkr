@@ -1,7 +1,12 @@
 open System
 open System.Xml
+open System.Threading
+open System.Threading.Tasks
 open System.ServiceModel.Syndication
 open Microsoft.AspNetCore.Http
+open Microsoft.Extensions.DependencyInjection
+open Microsoft.Extensions.Hosting
+open Microsoft.Extensions.Logging
 open Microsoft.Extensions.Configuration
 open Saturn
 open Fable.Remoting.Server
@@ -10,24 +15,29 @@ open Npgsql.FSharp
 
 open Shared
 
+let rssDbConnectionStringKey = "RssDb"
+
 /// Ref: https://github.com/CompositionalIT/TodoService/blob/main/src/app/Todo.Api.fs
 type HttpContext with
 
     /// The SQL connection string to the RSS database.
     member this.RssDbConnectionString =
-        match this.GetService<IConfiguration>().GetConnectionString "RssDb" with
+        match this.GetService<IConfiguration>().GetConnectionString rssDbConnectionStringKey with
         | null -> failwith "Missing connection string"
         | v -> v
 
 type User =
     { Id: string
       Username: string
-      Password: string }
+      Password: string
+      Email: string }
 
 type RssUrl =
     { Id: string
       Url: string
       UserId: string }
+
+type RssEmailsAggregate = { Url: string; Emails: string }
 
 let connectionString = Environment.GetEnvironmentVariable "DB_CONNECTION_STRING"
 
@@ -54,9 +64,10 @@ module DataAccess =
         |> Sql.query "SELECT id, username, password FROM users WHERE username = @username"
         |> Sql.parameters [ "@username", Sql.string loginForm.Username ]
         |> Sql.execute (fun read ->
-            { Id = read.string "id"
-              Username = read.text "username"
-              Password = read.text "password" })
+            { User.Id = read.string "id"
+              User.Username = read.text "username"
+              User.Password = read.text "password"
+              User.Email = "" })
         |> List.tryHead
 
     let insertUser (connectionString: string) (loginForm: LoginForm) =
@@ -117,10 +128,56 @@ module DataAccess =
             "SELECT u.id AS user_id, u.username AS user_username, u.password AS user_password FROM users u LEFT JOIN sessions s ON s.user_id = u.id WHERE s.id = @session_id"
         |> Sql.parameters [ "@session_id", Sql.string sessionId ]
         |> Sql.execute (fun read ->
-            { Id = read.string "user_id"
-              Username = read.text "user_username"
-              Password = read.text "user_password" })
+            { User.Id = read.string "user_id"
+              User.Username = read.text "user_username"
+              User.Password = read.text "user_password"
+              User.Email = "" })
         |> List.tryHead
+
+    let aggreateRssEmails (cancellationToken: CancellationToken) (connectionString: string) =
+        connectionString
+        |> Sql.connect
+        |> Sql.cancellationToken cancellationToken
+        |> Sql.query
+            "SELECT ru.url, STRING_AGG(u.email, ', ') AS emails FROM rss_urls ru LEFT JOIN users u ON u.id = ru.user_id GROUP BY url"
+        |> Sql.execute (fun read ->
+            { RssEmailsAggregate.Url = read.string "url"
+              RssEmailsAggregate.Emails = read.text "emails" })
+
+module Worker =
+    /// A full background service using a dedicated type.
+    /// Ref: https://github.com/CompositionalIT/background-services
+    type SendEmailSubscription(configuration: IConfiguration, logger: ILogger<unit>) =
+        inherit BackgroundService()
+
+        /// Called when the background service needs to run.
+        override this.ExecuteAsync(stoppingToken: CancellationToken) =
+            task {
+                logger.LogInformation "Background service start."
+                this.DoWork(stoppingToken) |> Async.AwaitTask |> ignore
+            }
+
+        member private __.DoWork(stoppingToken: CancellationToken) : Task =
+            task {
+                while true do
+                    logger.LogInformation "Background service running."
+
+                    let rssEmails =
+                        DataAccess.aggreateRssEmails
+                            stoppingToken
+                            (configuration.GetConnectionString rssDbConnectionStringKey)
+
+                    rssEmails |> List.iter ((fun item -> printf $"{item.Url}"))
+
+                    do! Task.Delay(15000, stoppingToken)
+            }
+
+        /// Called when a background service needs to gracefully shut down.
+        override this.StopAsync(stoppingToken: CancellationToken) =
+            task {
+                logger.LogInformation "Background service shutting down."
+                this.StopAsync stoppingToken |> Async.AwaitTask |> ignore
+            }
 
 module Handler =
     let getRSSList (urls: string array) =
@@ -241,6 +298,7 @@ module Router =
 let app =
     application {
         use_static "wwwroot"
+        service_config (fun (s: IServiceCollection) -> s.AddHostedService<Worker.SendEmailSubscription>())
         use_router Router.defaultView
         memory_cache
         use_gzip
