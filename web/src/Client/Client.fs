@@ -64,6 +64,12 @@ module Component =
                   prop.children [ Daisy.alert [ alert.error; prop.text error ] ] ]
         | None -> React.fragment []
 
+module Search =
+    let generateUrlSearch (urls: string seq) : string =
+        match (urls |> String.concat ",") with
+        | "" -> "/"
+        | newUrl -> ("?url=" + newUrl)
+
 module RSS =
 
     type ServerState =
@@ -95,12 +101,6 @@ module RSS =
           State.RSSList = Seq.empty
           State.ServerState = Idle },
         Cmd.none
-
-    let generateUrlSearch (urls: string seq) : string =
-        match (urls |> String.concat ",") with
-        | "" -> "/"
-        | newUrl -> ("?url=" + newUrl)
-
     let update (user: User option) (msg: Msg) (state: State) : State * Cmd<Msg> =
         match msg with
         | SetUrl(url: string) ->
@@ -112,25 +112,23 @@ module RSS =
 
             let nextState, nextCmd =
                 if url <> "" && not isUrlExists then
-                    state, Array.append state.Urls [| url |] |> generateUrlSearch |> Navigation.newUrl
+                    state,
+                    Array.append state.Urls [| url |]
+                    |> Search.generateUrlSearch
+                    |> Navigation.newUrl
                 else
                     { state with Url = "" }, Cmd.none
 
             nextState, nextCmd
         | SetUrls(urls: string array) ->
-            let urlsString = (generateUrlSearch urls)
-
             let nextState = { state with Url = ""; Urls = urls }
 
-            let nextCmd =
-                Cmd.batch [ Navigation.newUrl urlsString; Cmd.ofMsg (GetRSSList urls) ]
-
-            nextState, nextCmd
+            nextState, urls |> GetRSSList |> Cmd.ofMsg
         | RemoveUrl(url: string) ->
             state,
             state.Urls
             |> Array.filter (fun elm -> elm <> url)
-            |> generateUrlSearch
+            |> Search.generateUrlSearch
             |> Navigation.newUrl
         | SaveUrls ->
             state,
@@ -302,7 +300,7 @@ module Auth =
                     Error = error }
 
             nextState, Cmd.none
-        | LoginSuccess(_: LoginResult option) -> state, Cmd.none
+        | LoginSuccess(_: LoginResult option)
         | Logout -> state, Cmd.none
 
     let render (isLoggedIn: bool) (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
@@ -392,18 +390,21 @@ let urlUpdate (route: BrowserRoute option) (state: State) =
     |> RSSMsg
     |> Cmd.ofMsg
 
-let init (_: BrowserRoute option) =
+let init (route: BrowserRoute option) =
     let rssState, rssCmd = RSS.init ()
     let authState, authCmd = Auth.init ()
 
-    let initialModel =
+    let initialState =
         { User = None
           RSS = rssState
           Auth = authState }
 
-    let initialCmd = Cmd.batch [ Cmd.map RSSMsg rssCmd; Cmd.map AuthMsg authCmd ]
+    let _initialState, initalCmd = urlUpdate route initialState
 
-    initialModel, initialCmd
+    let _initialCmd =
+        Cmd.batch [ Cmd.map RSSMsg rssCmd; Cmd.map AuthMsg authCmd; initalCmd ]
+
+    _initialState, _initialCmd
 
 let update (msg: Msg) (state: State) =
     match msg with
@@ -429,7 +430,9 @@ let update (msg: Msg) (state: State) =
                         Auth = authState
                         State.User = Some user }
 
-                nextState, loginResult.RssUrls |> RSS.Msg.SetUrls |> RSSMsg |> Cmd.ofMsg
+                let nextCmd = loginResult.RssUrls |> Search.generateUrlSearch |> Navigation.newUrl
+
+                nextState, nextCmd
             | None -> state, Cmd.none
         | Auth.Logout ->
             Session.removeSessionId ()
