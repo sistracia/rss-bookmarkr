@@ -32,6 +32,8 @@ type User =
       Password: string
       Email: string }
 
+    member this.IsSubscribing = this.Email <> ""
+
 type RssUrl =
     { Id: string
       Url: string
@@ -199,7 +201,8 @@ module Handler =
         let loginResult =
             { LoginResult.UserId = userId
               LoginResult.RssUrls = Array.empty
-              LoginResult.SessionId = sessionId }
+              LoginResult.SessionId = sessionId
+              LoginResult.IsSubscribing = false }
 
         Success loginResult
 
@@ -208,7 +211,8 @@ module Handler =
             let loginResult =
                 { LoginResult.UserId = user.Id
                   LoginResult.RssUrls = (DataAccess.getRSSUrls connectionString user.Id) |> List.toArray
-                  LoginResult.SessionId = sessionId }
+                  LoginResult.SessionId = sessionId
+                  LoginResult.IsSubscribing = user.IsSubscribing }
 
             Success loginResult
         else
@@ -261,7 +265,8 @@ module Handler =
                     let loginResult =
                         { LoginResult.UserId = user.Id
                           LoginResult.RssUrls = (DataAccess.getRSSUrls connectionString user.Id) |> List.toArray
-                          LoginResult.SessionId = sessionId }
+                          LoginResult.SessionId = sessionId
+                          LoginResult.IsSubscribing = user.IsSubscribing }
 
                     Success loginResult)
         }

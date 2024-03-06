@@ -15,7 +15,8 @@ type LoginForm = { Username: string; Password: string }
 type LoginResult =
     { UserId: string
       RssUrls: string array
-      SessionId: string }
+      SessionId: string
+      IsSubscribing: bool }
 
 [<Struct>]
 type LoginError = { Message: string }

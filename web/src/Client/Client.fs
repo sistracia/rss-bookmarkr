@@ -16,7 +16,10 @@ open Elmish.Debug
 open Elmish.HMR
 #endif
 
-type User = { UserId: string; SessionId: string }
+type User =
+    { UserId: string
+      SessionId: string
+      IsSubscribing: bool }
 
 /// Copy from https://github.com/Dzoukr/Yobo/blob/master/src/Yobo.Client/TokenStorage.fs
 module Session =
@@ -70,6 +73,71 @@ module Search =
         | "" -> "/"
         | newUrl -> ("?url=" + newUrl)
 
+module Subscription =
+
+    type State = { Email: string }
+
+    type Msg =
+        | ChangeEmail of string
+        | Subscribe of userId: string
+        | Unsubscribe of userId: string
+        | SubscriptionChange
+
+    let init () = { State.Email = "" }, Cmd.none
+
+    let update (state: State) (msg: Msg) : State * Cmd<Msg> =
+        match msg with
+        | ChangeEmail(email: string) ->
+            let nextState = { state with Email = email }
+            nextState, Cmd.none
+        | Subscribe(userId: string) ->
+            printf "subscribe"
+            state, Cmd.ofMsg SubscriptionChange
+        | Unsubscribe(userId: string) -> state, Cmd.none
+        | SubscriptionChange ->
+            printf "subscription change"
+            let nextState = { state with Email = "" }
+            nextState, Cmd.none
+
+    let render (user: User) (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
+        if user.IsSubscribing then
+            Daisy.button.button [ button.link; prop.text "Unsubscribe" ]
+        else
+            React.fragment
+                [ Daisy.button.label
+                      [ button.link
+                        prop.key "subscribe-button"
+                        prop.htmlFor "subscribe-modal"
+                        prop.text "Subscribe" ]
+
+                  Html.div
+                      [ Daisy.modalToggle [ prop.id "subscribe-modal" ]
+                        Daisy.modal.div
+                            [ prop.children
+                                  [ Daisy.modalBox.div
+                                        [ Html.form
+                                              [ Html.h2 [ prop.text "Subscribe Form" ]
+                                                Daisy.formControl
+                                                    [ Daisy.label
+                                                          [ prop.htmlFor "subscribe-email-field"
+                                                            prop.children [ Daisy.labelText "E-Mail" ] ]
+                                                      Daisy.input
+                                                          [ input.bordered
+                                                            prop.id "subscribe-email-field"
+                                                            prop.placeholder "email@domain.com"
+                                                            prop.required true
+                                                            prop.value state.Email
+                                                            prop.onChange (ChangeEmail >> dispatch) ] ]
+                                                Daisy.modalAction
+                                                    [ Daisy.button.label
+                                                          [ prop.htmlFor "subscribe-modal"; prop.text "Cancel" ]
+                                                      Daisy.button.label
+                                                          [ button.neutral
+                                                            prop.htmlFor "subscribe-modal"
+                                                            prop.text "Subscribe"
+                                                            prop.type' "submit"
+                                                            prop.onClick (fun _ -> dispatch (Subscribe user.UserId)) ] ] ] ] ] ] ] ]
+
 module RSS =
 
     type ServerState =
@@ -82,7 +150,8 @@ module RSS =
           Urls: string array
           Error: string option
           ServerState: ServerState
-          RSSList: RSS seq }
+          RSSList: RSS seq
+          Subscription: Subscription.State }
 
     type Msg =
         | SetUrl of string
@@ -93,14 +162,23 @@ module RSS =
         | SetError of error: string option
         | GetRSSList of urls: string array
         | GotRSSList of RSS seq
+        | SubscriptionMsg of Subscription.Msg
 
     let init () =
-        { State.Urls = Array.empty
-          State.Url = ""
-          Error = None
-          State.RSSList = Seq.empty
-          State.ServerState = Idle },
-        Cmd.none
+        let subscriptionState, subscriptionCmd = Subscription.init ()
+
+        let initialState =
+            { State.Urls = Array.empty
+              State.Url = ""
+              Error = None
+              State.RSSList = Seq.empty
+              State.ServerState = Idle
+              State.Subscription = subscriptionState }
+
+        let initialCmd = Cmd.batch [ Cmd.map SubscriptionMsg subscriptionCmd ]
+
+        initialState, initialCmd
+
     let update (user: User option) (msg: Msg) (state: State) : State * Cmd<Msg> =
         match msg with
         | SetUrl(url: string) ->
@@ -158,20 +236,31 @@ module RSS =
         | SetError(error: string option) ->
             let nextState = { state with Error = error }
             nextState, Cmd.none
+        | SubscriptionMsg(subscriptionMsg: Subscription.Msg) ->
+            let nextSubscriptionState, nextSubscriptionMsg =
+                Subscription.update state.Subscription subscriptionMsg
 
-    let render (isLoggedIn: bool) (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
+            let nextState =
+                { state with
+                    Subscription = nextSubscriptionState }
+
+            let nextCmd = Cmd.map SubscriptionMsg nextSubscriptionMsg
+            nextState, nextCmd
+
+    let render (user: User option) (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
         React.fragment
             [ Html.div
                   [ prop.className "w-full flex flex-wrap gap-3"
-                    prop.children[Daisy.input
-                                      [ input.bordered
-                                        prop.value state.Url
-                                        prop.onChange (SetUrl >> dispatch)
-                                        prop.className "flex-1"
-                                        prop.placeholder "https://overreacted.io/rss.xml" ]
+                    prop.children
+                        [ Daisy.input
+                              [ input.bordered
+                                prop.value state.Url
+                                prop.onChange (SetUrl >> dispatch)
+                                prop.className "flex-1"
+                                prop.placeholder "https://overreacted.io/rss.xml" ]
 
-                                  Daisy.button.button
-                                      [ button.neutral; prop.onClick (fun _ -> dispatch AddUrl); prop.text "Add" ]] ]
+                          Daisy.button.button
+                              [ button.neutral; prop.onClick (fun _ -> dispatch AddUrl); prop.text "Add" ] ] ]
               Html.div
                   [ prop.className "flex flex-wrap gap-3"
                     prop.children
@@ -186,14 +275,18 @@ module RSS =
                                                       prop.onClick (fun _ -> dispatch (RemoveUrl url))
                                                       prop.text "X" ]
                                                 Html.span [ color.textNeutralContent; prop.text url ] ] ] ] ] ]
-              if state.Urls.Length <> 0 && isLoggedIn then
+              if state.Urls.Length <> 0 && user <> None then
                   Html.div
                       [ prop.className "flex flex-wrap gap-3"
                         prop.children
                             [ Daisy.button.button
                                   [ button.link
                                     prop.onClick (fun _ -> dispatch SaveUrls)
-                                    prop.text "Save Urls" ] ] ]
+                                    prop.text "Save Urls" ]
+                              match user with
+                              | None -> ()
+                              | Some(user: User) ->
+                                  Subscription.render user state.Subscription (SubscriptionMsg >> dispatch) ] ]
               Component.renderError state.Error
 
               Html.div
@@ -409,9 +502,11 @@ let init (route: BrowserRoute option) =
 let update (msg: Msg) (state: State) =
     match msg with
     | RSSMsg(rssMsg: RSS.Msg) ->
-        let nextRSSState, nextRSSCmd = RSS.update state.User rssMsg state.RSS
-        let nextState = { state with RSS = nextRSSState }
-        nextState, Cmd.map RSSMsg nextRSSCmd
+        match rssMsg with
+        | _ ->
+            let nextRSSState, nextRSSCmd = RSS.update state.User rssMsg state.RSS
+            let nextState = { state with RSS = nextRSSState }
+            nextState, Cmd.map RSSMsg nextRSSCmd
     | AuthMsg(authMsg: Auth.Msg) ->
         match authMsg with
         | Auth.LoginSuccess(loginResult: LoginResult option) ->
@@ -423,7 +518,8 @@ let update (msg: Msg) (state: State) =
 
                 let user =
                     { User.SessionId = loginResult.SessionId
-                      User.UserId = loginResult.UserId }
+                      User.UserId = loginResult.UserId
+                      User.IsSubscribing = loginResult.IsSubscribing }
 
                 let nextState =
                     { state with
@@ -456,7 +552,7 @@ let render (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
         [ prop.className "max-w-[768px] p-5 mx-auto flex flex-col gap-3"
           prop.children
               [ Auth.render isLoggedIn state.Auth (AuthMsg >> dispatch)
-                RSS.render isLoggedIn state.RSS (RSSMsg >> dispatch) ] ]
+                RSS.render state.User state.RSS (RSSMsg >> dispatch) ] ]
 
 Program.mkProgram init update render
 |> Program.toNavigable (parsePath route) urlUpdate
