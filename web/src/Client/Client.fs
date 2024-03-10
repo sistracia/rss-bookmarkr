@@ -1,4 +1,4 @@
-module App
+﻿module App
 
 open System
 open Feliz
@@ -57,6 +57,11 @@ module RPC =
     let initLogin (sessionId: string) : LoginResponse Async =
         async { return! store.initLogin sessionId }
 
+    let subscribe (userId: string, email: string) : unit Async =
+        async { do! store.subscribe (userId, email) }
+
+    let unsubscribe (userId: string) : unit Async = async { do! store.unsubscribe userId }
+
 module Component =
     let renderError (error: string option) : Fable.React.ReactElement =
         match error with
@@ -99,7 +104,9 @@ module RSS =
         | GotRSSList of RSS seq
         | ChangeEmail of string
         | Subscribe of userId: string
+        | OnSubscribed of unit
         | Unsubscribe of userId: string
+        | OnUnsubscribe of unit
         | SubscriptionChange
 
     let init () =
@@ -171,9 +178,15 @@ module RSS =
             let nextState = { state with Email = email }
             nextState, Cmd.none
         | Subscribe(userId: string) ->
-            printf "subscribe"
-            state, Cmd.ofMsg SubscriptionChange
-        | Unsubscribe(userId: string) -> state, Cmd.none
+            let ofError = fun (ex: exn) -> Some ex.Message |> SetError
+            state, Cmd.OfAsync.either RPC.subscribe (userId, state.Email) OnSubscribed ofError
+        | OnSubscribed() ->
+            let nextState = { state with Email = "" }
+            nextState, SubscriptionChange |> Cmd.ofMsg
+        | Unsubscribe(userId: string) ->
+            let ofError = fun (ex: exn) -> Some ex.Message |> SetError
+            state, Cmd.OfAsync.either RPC.unsubscribe userId OnUnsubscribe ofError
+        | OnUnsubscribe() -> state, SubscriptionChange |> Cmd.ofMsg
         | SubscriptionChange -> state, Cmd.none
         | SetError(error: string option) ->
             let nextState = { state with Error = error }
@@ -219,7 +232,10 @@ module RSS =
                               | None -> ()
                               | Some(user: User) ->
                                   if user.IsSubscribing then
-                                      Daisy.button.button [ button.link; prop.text "Unsubscribe" ]
+                                      Daisy.button.button
+                                          [ button.link
+                                            prop.onClick (fun _ -> dispatch (Unsubscribe user.UserId))
+                                            prop.text "Unsubscribe" ]
                                   else
                                       React.fragment
                                           [ Daisy.button.label

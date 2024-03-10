@@ -30,7 +30,9 @@ type IRPCStore =
     { getRSSList: string array -> RSS seq Async
       loginOrRegister: LoginForm -> LoginResponse Async
       saveRSSUrls: (string * string array) -> unit Async
-      initLogin: string -> LoginResponse Async }
+      initLogin: string -> LoginResponse Async
+      subscribe: (string * string) -> unit Async
+      unsubscribe: string -> unit Async }
 
 module Route =
     let routeBuilder (typeName: string) (methodName: string) =

@@ -112,13 +112,13 @@ module DataAccess =
     let getUser (connectionString: string) (loginForm: LoginForm) =
         connectionString
         |> Sql.connect
-        |> Sql.query "SELECT id, username, password FROM users WHERE username = @username"
+        |> Sql.query "SELECT id, username, password, email FROM users WHERE username = @username"
         |> Sql.parameters [ "@username", Sql.string loginForm.Username ]
         |> Sql.execute (fun read ->
             { User.Id = read.string "id"
               User.Username = read.text "username"
               User.Password = read.text "password"
-              User.Email = "" })
+              User.Email = read.text "email" })
         |> List.tryHead
 
     let insertUser (connectionString: string) (loginForm: LoginForm) =
@@ -176,13 +176,13 @@ module DataAccess =
         connectionString
         |> Sql.connect
         |> Sql.query
-            "SELECT u.id AS user_id, u.username AS user_username, u.password AS user_password FROM users u LEFT JOIN sessions s ON s.user_id = u.id WHERE s.id = @session_id"
+            "SELECT u.id AS user_id, u.username AS user_username, u.password AS user_password, u.email AS user_email FROM users u LEFT JOIN sessions s ON s.user_id = u.id WHERE s.id = @session_id"
         |> Sql.parameters [ "@session_id", Sql.string sessionId ]
         |> Sql.execute (fun read ->
             { User.Id = read.string "user_id"
               User.Username = read.text "user_username"
               User.Password = read.text "user_password"
-              User.Email = "" })
+              User.Email = read.text "user_email" })
         |> List.tryHead
 
     let aggreateRssEmails (cancellationToken: CancellationToken) (connectionString: string) =
@@ -194,6 +194,14 @@ module DataAccess =
         |> Sql.execute (fun read ->
             { RssEmailsAggregate.Url = read.string "url"
               RssEmailsAggregate.Emails = read.text "emails" })
+
+    let setUserEmail (connectionString: string) (userId: string) (email: string) =
+        connectionString
+        |> Sql.connect
+        |> Sql.query "UPDATE users SET email = @email WHERE id = @id"
+        |> Sql.parameters [ "@id", Sql.text userId; "@email", Sql.text email ]
+        |> Sql.executeNonQuery
+        |> ignore
 
 module Worker =
     /// A full background service using a dedicated type.
@@ -320,6 +328,12 @@ module Handler =
                     Success loginResult)
         }
 
+    let subscribe (connectionString: string) (userId: string, email: string) : unit Async =
+        async { (DataAccess.setUserEmail connectionString userId email) |> ignore }
+
+    let unsubscribe (connectionString: string) (userId: string) : unit Async =
+        async { (DataAccess.setUserEmail connectionString userId "") |> ignore }
+
     let rssIndexAction (ctx: HttpContext) =
         task {
             let! rssList = ctx.Request.Query.Item("url").ToArray() |> getRSSList
@@ -330,7 +344,9 @@ let rpcStore (ctx: HttpContext) =
     { IRPCStore.getRSSList = Handler.getRSSList
       IRPCStore.loginOrRegister = (Handler.loginOrRegister ctx.RssDbConnectionString)
       IRPCStore.saveRSSUrls = (Handler.saveRSSUrls ctx.RssDbConnectionString)
-      IRPCStore.initLogin = (Handler.initLogin ctx.RssDbConnectionString) }
+      IRPCStore.initLogin = (Handler.initLogin ctx.RssDbConnectionString)
+      IRPCStore.subscribe = (Handler.subscribe ctx.RssDbConnectionString)
+      IRPCStore.unsubscribe = (Handler.unsubscribe ctx.RssDbConnectionString) }
 
 let webApp =
     Remoting.createApi ()
