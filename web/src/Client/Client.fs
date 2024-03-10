@@ -1,11 +1,10 @@
-﻿module App
+module App
 
 open System
 open Feliz
 open Elmish
 open Elmish.Navigation
 open Elmish.UrlParser
-open Elmish.React
 open Fable.Remoting.Client
 open Feliz.DaisyUI
 open Feliz.DaisyUI.Operators
@@ -73,70 +72,6 @@ module Search =
         | "" -> "/"
         | newUrl -> ("?url=" + newUrl)
 
-module Subscription =
-
-    type State = { Email: string }
-
-    type Msg =
-        | ChangeEmail of string
-        | Subscribe of userId: string
-        | Unsubscribe of userId: string
-        | SubscriptionChange
-
-    let init () = { State.Email = "" }, Cmd.none
-
-    let update (state: State) (msg: Msg) : State * Cmd<Msg> =
-        match msg with
-        | ChangeEmail(email: string) ->
-            let nextState = { state with Email = email }
-            nextState, Cmd.none
-        | Subscribe(userId: string) ->
-            printf "subscribe"
-            state, Cmd.ofMsg SubscriptionChange
-        | Unsubscribe(userId: string) -> state, Cmd.none
-        | SubscriptionChange ->
-            printf "subscription change"
-            let nextState = { state with Email = "" }
-            nextState, Cmd.none
-
-    let render (user: User) (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
-        if user.IsSubscribing then
-            Daisy.button.button [ button.link; prop.text "Unsubscribe" ]
-        else
-            React.fragment
-                [ Daisy.button.label
-                      [ button.link
-                        prop.key "subscribe-button"
-                        prop.htmlFor "subscribe-modal"
-                        prop.text "Subscribe" ]
-
-                  Html.div
-                      [ Daisy.modalToggle [ prop.id "subscribe-modal" ]
-                        Daisy.modal.div
-                            [ prop.children
-                                  [ Daisy.modalBox.div
-                                        [ Html.form
-                                              [ Html.h2 [ prop.text "Subscribe Form" ]
-                                                Daisy.formControl
-                                                    [ Daisy.label
-                                                          [ prop.htmlFor "subscribe-email-field"
-                                                            prop.children [ Daisy.labelText "E-Mail" ] ]
-                                                      Daisy.input
-                                                          [ input.bordered
-                                                            prop.id "subscribe-email-field"
-                                                            prop.placeholder "email@domain.com"
-                                                            prop.required true
-                                                            prop.value state.Email
-                                                            prop.onChange (ChangeEmail >> dispatch) ] ]
-                                                Daisy.modalAction
-                                                    [ Daisy.button.label
-                                                          [ prop.htmlFor "subscribe-modal"; prop.text "Cancel" ]
-                                                      Daisy.button.label
-                                                          [ button.neutral
-                                                            prop.htmlFor "subscribe-modal"
-                                                            prop.text "Subscribe"
-                                                            prop.type' "submit"
-                                                            prop.onClick (fun _ -> dispatch (Subscribe user.UserId)) ] ] ] ] ] ] ] ]
 
 module RSS =
 
@@ -151,7 +86,7 @@ module RSS =
           Error: string option
           ServerState: ServerState
           RSSList: RSS seq
-          Subscription: Subscription.State }
+          Email: string }
 
     type Msg =
         | SetUrl of string
@@ -162,22 +97,21 @@ module RSS =
         | SetError of error: string option
         | GetRSSList of urls: string array
         | GotRSSList of RSS seq
-        | SubscriptionMsg of Subscription.Msg
+        | ChangeEmail of string
+        | Subscribe of userId: string
+        | Unsubscribe of userId: string
+        | SubscriptionChange
 
     let init () =
-        let subscriptionState, subscriptionCmd = Subscription.init ()
-
         let initialState =
             { State.Urls = Array.empty
               State.Url = ""
-              Error = None
+              State.Error = None
               State.RSSList = Seq.empty
               State.ServerState = Idle
-              State.Subscription = subscriptionState }
+              State.Email = "" }
 
-        let initialCmd = Cmd.batch [ Cmd.map SubscriptionMsg subscriptionCmd ]
-
-        initialState, initialCmd
+        initialState, Cmd.none
 
     let update (user: User option) (msg: Msg) (state: State) : State * Cmd<Msg> =
         match msg with
@@ -233,19 +167,17 @@ module RSS =
                 ServerState = Idle
                 RSSList = rssList },
             Cmd.none
+        | ChangeEmail(email: string) ->
+            let nextState = { state with Email = email }
+            nextState, Cmd.none
+        | Subscribe(userId: string) ->
+            printf "subscribe"
+            state, Cmd.ofMsg SubscriptionChange
+        | Unsubscribe(userId: string) -> state, Cmd.none
+        | SubscriptionChange -> state, Cmd.none
         | SetError(error: string option) ->
             let nextState = { state with Error = error }
             nextState, Cmd.none
-        | SubscriptionMsg(subscriptionMsg: Subscription.Msg) ->
-            let nextSubscriptionState, nextSubscriptionMsg =
-                Subscription.update state.Subscription subscriptionMsg
-
-            let nextState =
-                { state with
-                    Subscription = nextSubscriptionState }
-
-            let nextCmd = Cmd.map SubscriptionMsg nextSubscriptionMsg
-            nextState, nextCmd
 
     let render (user: User option) (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
         React.fragment
@@ -286,7 +218,52 @@ module RSS =
                               match user with
                               | None -> ()
                               | Some(user: User) ->
-                                  Subscription.render user state.Subscription (SubscriptionMsg >> dispatch) ] ]
+                                  if user.IsSubscribing then
+                                      Daisy.button.button [ button.link; prop.text "Unsubscribe" ]
+                                  else
+                                      React.fragment
+                                          [ Daisy.button.label
+                                                [ button.link
+                                                  prop.key "subscribe-button"
+                                                  prop.htmlFor "subscribe-modal"
+                                                  prop.text "Subscribe" ]
+
+                                            Html.div
+                                                [ Daisy.modalToggle [ prop.id "subscribe-modal" ]
+                                                  Daisy.modal.div
+                                                      [ prop.children
+                                                            [ Daisy.modalBox.div
+                                                                  [ Html.form
+                                                                        [ Html.h2 [ prop.text "Subscribe Form" ]
+                                                                          Daisy.formControl
+                                                                              [ Daisy.label
+                                                                                    [ prop.htmlFor
+                                                                                          "subscribe-email-field"
+                                                                                      prop.children
+                                                                                          [ Daisy.labelText "E-Mail" ] ]
+                                                                                Daisy.input
+                                                                                    [ input.bordered
+                                                                                      prop.id "subscribe-email-field"
+                                                                                      prop.placeholder
+                                                                                          "email@domain.com"
+                                                                                      prop.required true
+                                                                                      prop.value state.Email
+                                                                                      prop.onChange (
+                                                                                          ChangeEmail >> dispatch
+                                                                                      ) ] ]
+                                                                          Daisy.modalAction
+                                                                              [ Daisy.button.label
+                                                                                    [ prop.htmlFor "subscribe-modal"
+                                                                                      prop.text "Cancel" ]
+                                                                                Daisy.button.label
+                                                                                    [ button.neutral
+                                                                                      prop.htmlFor "subscribe-modal"
+                                                                                      prop.text "Subscribe"
+                                                                                      prop.type' "submit"
+                                                                                      prop.onClick (fun _ ->
+                                                                                          dispatch (
+                                                                                              Subscribe user.UserId
+                                                                                          )) ] ] ] ] ] ] ] ] ] ]
               Component.renderError state.Error
 
               Html.div
@@ -350,7 +327,7 @@ module Auth =
           Error = None },
         InitUser |> Cmd.ofMsg
 
-    let update (msg: Msg) (state: State) =
+    let update (msg: Msg) (state: State) : State * Cmd<Msg> =
         match msg with
         | ChangeUsername(username: string) ->
             let nextState = { state with InputUsername = username }
@@ -502,10 +479,23 @@ let init (route: BrowserRoute option) =
 
     _initialState, _initialCmd
 
-let update (msg: Msg) (state: State) =
+let update (msg: Msg) (state: State) : State * Cmd<Msg> =
     match msg with
     | RSSMsg(rssMsg: RSS.Msg) ->
         match rssMsg with
+        | RSS.SubscriptionChange ->
+            let user =
+                match state.User with
+                | None -> state.User
+                | Some(user: User) ->
+                    let newUser =
+                        { user with
+                            IsSubscribing = not user.IsSubscribing }
+
+                    Some newUser
+
+            let nextState = { state with User = user }
+            nextState, Cmd.none
         | _ ->
             let nextRSSState, nextRSSCmd = RSS.update state.User rssMsg state.RSS
             let nextState = { state with RSS = nextRSSState }
