@@ -6,6 +6,7 @@ open System
 type RSS =
     { Title: string
       LastUpdatedTime: DateTime
+      TimeAgo: string
       Link: string }
 
 [<Struct>]
