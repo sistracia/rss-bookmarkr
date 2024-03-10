@@ -43,20 +43,22 @@ type RssEmailsAggregate = { Url: string; Emails: string }
 
 let connectionString = Environment.GetEnvironmentVariable "DB_CONNECTION_STRING"
 
-let parseRSS (url: string) =
-    async {
-        use reader = XmlReader.Create url
+module RSS =
 
-        return
-            (SyndicationFeed.Load reader).Items
-            |> Seq.map (fun item ->
-                { Title = item.Title.Text
-                  LastUpdatedTime = item.LastUpdatedTime.DateTime
-                  Link =
-                    match item.Links |> Seq.tryHead with
-                    | Some first -> first.Uri.AbsoluteUri
-                    | None -> "-" })
-    }
+    let parseRSS (url: string) =
+        async {
+            use reader = XmlReader.Create url
+
+            return
+                (SyndicationFeed.Load reader).Items
+                |> Seq.map (fun item ->
+                    { RSS.Title = item.Title.Text
+                      RSS.LastUpdatedTime = item.LastUpdatedTime.DateTime
+                      RSS.Link =
+                        match item.Links |> Seq.tryHead with
+                        | Some first -> first.Uri.AbsoluteUri
+                        | None -> "-" })
+        }
 
 module DataAccess =
 
@@ -184,7 +186,7 @@ module Worker =
 module Handler =
     let getRSSList (urls: string array) =
         async {
-            let! rssList = urls |> Seq.map (fun url -> parseRSS url |> Async.Catch) |> Async.Parallel
+            let! rssList = urls |> Seq.map (fun url -> RSS.parseRSS url |> Async.Catch) |> Async.Parallel
 
             return
                 rssList
