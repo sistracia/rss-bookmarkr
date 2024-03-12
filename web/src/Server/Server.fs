@@ -39,7 +39,16 @@ type RssUrl =
       Url: string
       UserId: string }
 
-type RssEmailsAggregate = { Url: string; Emails: string }
+type RssHistory =
+    { Url: string
+      LatestTitle: string option
+      LatestUpdated: DateTime option }
+
+type RssEmailsAggregate =
+    { Url: string
+      Emails: string
+      LatestTitle: string option
+      LatestUpdated: DateTime option }
 
 let connectionString = Environment.GetEnvironmentVariable "DB_CONNECTION_STRING"
 
@@ -91,21 +100,47 @@ module TimeAgo =
 
 module RSS =
 
-    let parseRSS (url: string) =
-        async {
-            use reader = XmlReader.Create url
+    let mapSydicatoinItem (originURL: string) (item: SyndicationItem) : RSS =
+        { RSS.Origin = originURL
+          RSS.Title = item.Title.Text
+          RSS.LastUpdatedTime = item.LastUpdatedTime.DateTime
+          RSS.TimeAgo = TimeAgo.getTimeAgo item.LastUpdatedTime.DateTime
+          RSS.Link =
+            match item.Links |> Seq.tryHead with
+            | Some first -> first.Uri.AbsoluteUri
+            | None -> "-" }
 
-            return
-                (SyndicationFeed.Load reader).Items
-                |> Seq.map (fun item ->
-                    { RSS.Title = item.Title.Text
-                      RSS.LastUpdatedTime = item.LastUpdatedTime.DateTime
-                      RSS.TimeAgo = TimeAgo.getTimeAgo item.LastUpdatedTime.DateTime
-                      RSS.Link =
-                        match item.Links |> Seq.tryHead with
-                        | Some first -> first.Uri.AbsoluteUri
-                        | None -> "-" })
+    let getRSSItems (url: string) =
+        use reader = XmlReader.Create url
+        (SyndicationFeed.Load reader).Items
+
+    let parseRSSList (url: string) : Async<RSS seq> =
+        async { return url |> getRSSItems |> Seq.map (mapSydicatoinItem url) }
+
+    let parseRSSes (urls: string array) =
+        async {
+            return!
+                urls
+                |> Seq.map (fun (url: string) -> parseRSSList url |> Async.Catch)
+                |> Async.Parallel
         }
+
+    let parseRSSHead (url: string) =
+        async {
+            return
+                match url |> getRSSItems |> Seq.tryHead with
+                | None -> None
+                | Some(item: SyndicationItem) -> Some(mapSydicatoinItem url item)
+        }
+
+    let parseRSSHeads (urls: string array) =
+        async {
+            return!
+                urls
+                |> Seq.map (fun (url: string) -> parseRSSHead url |> Async.Catch)
+                |> Async.Parallel
+        }
+
 
 module DataAccess =
 
@@ -150,7 +185,7 @@ module DataAccess =
             [ "INSERT INTO rss_urls (id, url, user_id) VALUES (@id, @url, @user_id)",
               [ yield!
                     urls
-                    |> Array.map (fun url ->
+                    |> Array.map (fun (url: string) ->
                         [ "@id", Sql.text (Guid.NewGuid().ToString())
                           "@url", Sql.text url
                           "@user_id", Sql.text userId ]) ] ]
@@ -172,11 +207,19 @@ module DataAccess =
         |> Sql.executeNonQuery
         |> ignore
 
-    let getUserSession (connectionString: string) (sessionId) =
+    let getUserSession (connectionString: string) (sessionId: string) =
         connectionString
         |> Sql.connect
         |> Sql.query
-            "SELECT u.id AS user_id, u.username AS user_username, u.password AS user_password, u.email AS user_email FROM users u LEFT JOIN sessions s ON s.user_id = u.id WHERE s.id = @session_id"
+            """SELECT
+                        u.id AS user_id,
+                        u.username AS user_username,
+                        u.password AS user_password,
+                        u.email AS user_email
+                    FROM users u
+                    LEFT JOIN sessions s
+                        ON s.user_id = u.id
+                    WHERE s.id = @session_id"""
         |> Sql.parameters [ "@session_id", Sql.string sessionId ]
         |> Sql.execute (fun read ->
             { User.Id = read.string "user_id"
@@ -190,10 +233,23 @@ module DataAccess =
         |> Sql.connect
         |> Sql.cancellationToken cancellationToken
         |> Sql.query
-            "SELECT ru.url, STRING_AGG(u.email, ', ') AS emails FROM rss_urls ru LEFT JOIN users u ON u.id = ru.user_id GROUP BY url"
+            """SELECT
+                        ru.url AS url,
+                        STRING_AGG(u.email, ', ') AS emails,
+                        rh.latest_title AS latest_title,
+                        rh.latest_updated AS latest_updated
+                    FROM rss_urls ru
+                    LEFT JOIN users u
+                        ON u.id = ru.user_id
+                        AND  u.email != ''
+                    LEFT JOIN rss_histories rh
+                        ON rh.url = ru.url
+                    GROUP BY ru.url, rh.latest_title, rh.latest_updated"""
         |> Sql.execute (fun read ->
             { RssEmailsAggregate.Url = read.string "url"
-              RssEmailsAggregate.Emails = read.text "emails" })
+              RssEmailsAggregate.Emails = read.text "emails"
+              RssEmailsAggregate.LatestTitle = read.textOrNone "latest_title"
+              RssEmailsAggregate.LatestUpdated = read.dateTimeOrNone "latest_updated" })
 
     let setUserEmail (connectionString: string) (userId: string) (email: string) =
         connectionString
@@ -201,6 +257,22 @@ module DataAccess =
         |> Sql.query "UPDATE users SET email = @email WHERE id = @id"
         |> Sql.parameters [ "@id", Sql.text userId; "@email", Sql.text email ]
         |> Sql.executeNonQuery
+        |> ignore
+
+    let renewRSSHistories (cancellationToken: CancellationToken) (connectionString: string) (remoteRSS: RSS seq) =
+        connectionString
+        |> Sql.connect
+        |> Sql.cancellationToken cancellationToken
+        |> Sql.executeTransaction
+            [ "TRUNCATE rss_histories", []
+              "INSERT INTO rss_histories (id, url, latest_title, latest_updated) VALUES (@id, @url, @latest_title, @latest_updated)",
+              [ yield!
+                    remoteRSS
+                    |> Seq.map (fun (rss: RSS) ->
+                        [ "@id", Sql.text (Guid.NewGuid().ToString())
+                          "@url", Sql.text rss.Origin
+                          "@latest_title", Sql.text rss.Title
+                          "@latest_updated", Sql.date DateTime.Now ]) ] ]
         |> ignore
 
 module Worker =
@@ -216,17 +288,58 @@ module Worker =
                 this.DoWork(stoppingToken) |> Async.AwaitTask |> ignore
             }
 
-        member private __.DoWork(stoppingToken: CancellationToken) : Task =
+        member private __.GetRSSAggregate(stoppingToken: CancellationToken) : RssEmailsAggregate list =
+            DataAccess.aggreateRssEmails stoppingToken (configuration.GetConnectionString rssDbConnectionStringKey)
+
+        member private __.GetLatestRemoteRSS(storedRSSes: RssEmailsAggregate list) =
+            storedRSSes |> List.map _.Url |> List.toArray |> RSS.parseRSSHeads
+
+        /// New RSS determined by latest title not same as stored in database.
+        ///
+        /// In-case the stored latest title is deleted from remote URL by the author,
+        /// make sure the latest item published date from remote URL is not before
+        /// the latest update stored in database.
+        member private __.FilterNewRemoteRSS (storedRSSes: RssEmailsAggregate list) (remoteRSS: RSS) =
+            let compareLatest (a: DateTime) (b: DateTime option) =
+                match b with
+                | None -> true
+                | Some(b: DateTime) -> DateTime.Compare(a, b) >= 0
+
+            let existFinder (rssAggregate: RssEmailsAggregate) =
+                rssAggregate.Url <> remoteRSS.Link
+                && compareLatest remoteRSS.LastUpdatedTime rssAggregate.LatestUpdated
+
+            (storedRSSes |> Seq.exists existFinder)
+
+        /// Get new RSS from remote URL and compare with RSS history in database
+        /// to get detect new publised RSS from remote URL
+        member private this.FilterNewRSS (storedRSSes: RssEmailsAggregate list) (remoteRSS) =
+            remoteRSS
+            |> Seq.map (function
+                | Choice1Of2 rss -> rss
+                | Choice2Of2 _ -> None)
+            |> Seq.choose id
+            |> Seq.filter (this.FilterNewRemoteRSS storedRSSes)
+
+        member private __.StoreRemoteRSS (stoppingToken: CancellationToken) (remoteRSS: RSS seq) =
+            DataAccess.renewRSSHistories
+                stoppingToken
+                (configuration.GetConnectionString rssDbConnectionStringKey)
+                remoteRSS
+            |> ignore
+
+        member private this.DoWork(stoppingToken: CancellationToken) : Task =
             task {
                 while true do
                     logger.LogInformation "Background service running."
 
-                    let rssEmails =
-                        DataAccess.aggreateRssEmails
-                            stoppingToken
-                            (configuration.GetConnectionString rssDbConnectionStringKey)
-
-                    rssEmails |> List.iter ((fun item -> printf $"{item.Url}"))
+                    try
+                        let rssAggregate = this.GetRSSAggregate stoppingToken
+                        let! rssList = this.GetLatestRemoteRSS rssAggregate
+                        let newRSS = this.FilterNewRSS rssAggregate rssList
+                        this.StoreRemoteRSS stoppingToken newRSS
+                    with (ex: exn) ->
+                        printf $"{ex.Message}"
 
                     do! Task.Delay(15000, stoppingToken)
             }
@@ -241,7 +354,7 @@ module Worker =
 module Handler =
     let getRSSList (urls: string array) =
         async {
-            let! rssList = urls |> Seq.map (fun url -> RSS.parseRSS url |> Async.Catch) |> Async.Parallel
+            let! rssList = urls |> RSS.parseRSSes
 
             return
                 rssList
@@ -249,7 +362,7 @@ module Handler =
                     | Choice1Of2 rss -> rss
                     | Choice2Of2 _ -> Seq.empty)
                 |> Seq.fold (fun acc elem -> Seq.concat [ acc; elem ]) []
-                |> Seq.sortByDescending (fun rss -> rss.LastUpdatedTime)
+                |> Seq.sortByDescending _.LastUpdatedTime
         }
 
     let register (connectionString: string) (sessionId: string) (loginForm: LoginForm) : LoginResponse =

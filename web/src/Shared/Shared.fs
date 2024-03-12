@@ -4,7 +4,8 @@ open System
 
 [<Struct>]
 type RSS =
-    { Title: string
+    { Origin: string
+      Title: string
       LastUpdatedTime: DateTime
       TimeAgo: string
       Link: string }
