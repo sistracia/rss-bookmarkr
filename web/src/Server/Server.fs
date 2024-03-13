@@ -50,6 +50,15 @@ type RssEmailsAggregate =
       LatestTitle: string option
       LatestUpdated: DateTime option }
 
+type MailSettings() =
+    static member SettingName = "MailSettings"
+    member val Server: string = "" with get, set
+    member val Port: int = 0 with get, set
+    member val SenderName: string = "" with get, set
+    member val SenderEmail: string = "" with get, set
+    member val UserName: string = "" with get, set
+    member val Password: string = "" with get, set
+
 let connectionString = Environment.GetEnvironmentVariable "DB_CONNECTION_STRING"
 
 /// Ref: https://stackoverflow.com/a/1248/12976234
@@ -281,6 +290,11 @@ module Worker =
     type SendEmailSubscription(configuration: IConfiguration, logger: ILogger<unit>) =
         inherit BackgroundService()
 
+        let connectionString = (configuration.GetConnectionString rssDbConnectionStringKey)
+
+        let emailOptions =
+            configuration.GetSection(MailSettings.SettingName).Get<MailSettings>()
+
         /// Called when the background service needs to run.
         override this.ExecuteAsync(stoppingToken: CancellationToken) =
             task {
@@ -288,8 +302,11 @@ module Worker =
                 this.DoWork(stoppingToken) |> Async.AwaitTask |> ignore
             }
 
-        member private __.GetRSSAggregate(stoppingToken: CancellationToken) : RssEmailsAggregate list =
-            DataAccess.aggreateRssEmails stoppingToken (configuration.GetConnectionString rssDbConnectionStringKey)
+        member private __.GetRSSAggregate
+            (connectionString: string)
+            (stoppingToken: CancellationToken)
+            : RssEmailsAggregate list =
+            DataAccess.aggreateRssEmails stoppingToken connectionString
 
         member private __.GetLatestRemoteRSS(storedRSSes: RssEmailsAggregate list) =
             storedRSSes |> List.map _.Url |> List.toArray |> RSS.parseRSSHeads
@@ -321,12 +338,12 @@ module Worker =
             |> Seq.choose id
             |> Seq.filter (this.FilterNewRemoteRSS storedRSSes)
 
-        member private __.StoreRemoteRSS (stoppingToken: CancellationToken) (remoteRSS: RSS seq) =
-            DataAccess.renewRSSHistories
-                stoppingToken
-                (configuration.GetConnectionString rssDbConnectionStringKey)
-                remoteRSS
-            |> ignore
+        member private __.StoreRemoteRSS
+            (connectionString: string)
+            (stoppingToken: CancellationToken)
+            (remoteRSS: RSS seq)
+            =
+            DataAccess.renewRSSHistories stoppingToken connectionString remoteRSS |> ignore
 
         member private this.DoWork(stoppingToken: CancellationToken) : Task =
             task {
@@ -334,10 +351,10 @@ module Worker =
                     logger.LogInformation "Background service running."
 
                     try
-                        let rssAggregate = this.GetRSSAggregate stoppingToken
+                        let rssAggregate = this.GetRSSAggregate connectionString stoppingToken
                         let! rssList = this.GetLatestRemoteRSS rssAggregate
                         let newRSS = this.FilterNewRSS rssAggregate rssList
-                        this.StoreRemoteRSS stoppingToken newRSS
+                        this.StoreRemoteRSS connectionString stoppingToken newRSS
                     with (ex: exn) ->
                         printf $"{ex.Message}"
 
