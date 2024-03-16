@@ -8,6 +8,9 @@ open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 open Microsoft.Extensions.Configuration
+open Microsoft.Extensions.Options
+open MimeKit
+open MailKit.Net.Smtp
 open Saturn
 open Fable.Remoting.Server
 open Fable.Remoting.Giraffe
@@ -16,6 +19,8 @@ open Npgsql.FSharp
 open Shared
 
 let rssDbConnectionStringKey = "RssDb"
+
+let hours24inMS = 1000 * 60 * 60 * 24
 
 /// Ref: https://github.com/CompositionalIT/TodoService/blob/main/src/app/Todo.Api.fs
 type HttpContext with
@@ -284,23 +289,62 @@ module DataAccess =
                           "@latest_updated", Sql.date DateTime.Now ]) ] ]
         |> ignore
 
-module Worker =
-    /// A full background service using a dedicated type.
-    /// Ref: https://github.com/CompositionalIT/background-services
-    type SendEmailSubscription(configuration: IConfiguration, logger: ILogger<unit>) =
-        inherit BackgroundService()
+module Mail =
+    type MailRecipient =
+        { EmailToId: string
+          EmailToName: string }
 
+    type MailData =
+        { EmailRecipients: MailRecipient array
+          EmailSubject: string
+          EmailBody: string }
+
+    type IMailService =
+        abstract member SendMail: mailData: MailData -> unit
+
+    type MailService(logger: ILogger<unit>, mailSettingsOptions: IOptions<MailSettings>) =
+        let mailSettings: MailSettings = mailSettingsOptions.Value
+
+        interface IMailService with
+            member __.SendMail(mailData: MailData) =
+                try
+                    use emailMessage = new MimeMessage()
+                    let emailFrom = MailboxAddress(mailSettings.SenderName, mailSettings.SenderEmail)
+                    emailMessage.From.Add(emailFrom)
+
+                    mailData.EmailRecipients
+                    |> Array.iter (fun (mailRecipient: MailRecipient) ->
+                        let emailTo = MailboxAddress(mailRecipient.EmailToName, mailRecipient.EmailToId)
+                        emailMessage.To.Add(emailTo))
+
+
+                    emailMessage.Subject <- mailData.EmailSubject
+                    let emailBodyBuilder = BodyBuilder()
+                    emailBodyBuilder.TextBody <- mailData.EmailBody
+
+                    emailMessage.Body <- emailBodyBuilder.ToMessageBody()
+
+                    use mailClient = new SmtpClient()
+
+                    mailClient.Connect(
+                        mailSettings.Server,
+                        mailSettings.Port,
+                        MailKit.Security.SecureSocketOptions.StartTls
+                    )
+
+                    mailClient.Authenticate(mailSettings.UserName, mailSettings.Password)
+                    mailClient.Send(emailMessage) |> ignore
+                    mailClient.Disconnect(true)
+                with (ex: exn) ->
+                    logger.LogInformation $"error MailService.SendMail: {ex.Message}\n"
+
+module RSSWorker =
+
+    type IRSSProcessingService =
+        abstract member DoWork: stoppingToken: CancellationToken -> Task
+
+    type RSSProcessingService(configuration: IConfiguration, logger: ILogger<unit>, service: IServiceProvider) =
         let connectionString = (configuration.GetConnectionString rssDbConnectionStringKey)
-
-        let emailOptions =
-            configuration.GetSection(MailSettings.SettingName).Get<MailSettings>()
-
-        /// Called when the background service needs to run.
-        override this.ExecuteAsync(stoppingToken: CancellationToken) =
-            task {
-                logger.LogInformation "Background service start."
-                this.DoWork(stoppingToken) |> Async.AwaitTask |> ignore
-            }
 
         member private __.GetRSSAggregate
             (connectionString: string)
@@ -345,20 +389,82 @@ module Worker =
             =
             DataAccess.renewRSSHistories stoppingToken connectionString remoteRSS |> ignore
 
-        member private this.DoWork(stoppingToken: CancellationToken) : Task =
-            task {
-                while true do
-                    logger.LogInformation "Background service running."
+        member private __.CreateEmailRecipients(rssAggregate: RssEmailsAggregate list) : Mail.MailRecipient array =
+            (rssAggregate |> List.map (fun (r) -> r.Emails) |> String.concat ", ")
+                .Split(", ")
+            |> Array.map (
+                (fun (recipient: string) ->
+                    { Mail.MailRecipient.EmailToId = recipient
+                      Mail.MailRecipient.EmailToName =
+                        match recipient.Split "@" |> Array.tryHead with
+                        | None -> recipient
+                        | Some(username: string) -> username })
+            )
 
+        member private __.CreateEmailBody(newRSS: RSS seq) : string =
+            newRSS |> Seq.map (fun (rss: RSS) -> rss.Title) |> String.concat ", "
+
+
+        member private __.SendEmail (recipients: Mail.MailRecipient array) (body: string) =
+            use scope = service.CreateScope()
+
+            let scopedMailService =
+                scope.ServiceProvider.GetRequiredService<Mail.IMailService>()
+
+            let mailData =
+                { Mail.MailData.EmailBody = body
+                  Mail.MailData.EmailSubject = "New RSS Release!"
+                  Mail.MailData.EmailRecipients = recipients }
+
+            scopedMailService.SendMail mailData
+
+        interface IRSSProcessingService with
+
+            member this.DoWork(stoppingToken: CancellationToken) =
+                task {
                     try
                         let rssAggregate = this.GetRSSAggregate connectionString stoppingToken
                         let! rssList = this.GetLatestRemoteRSS rssAggregate
                         let newRSS = this.FilterNewRSS rssAggregate rssList
-                        this.StoreRemoteRSS connectionString stoppingToken newRSS
-                    with (ex: exn) ->
-                        printf $"{ex.Message}"
 
-                    do! Task.Delay(15000, stoppingToken)
+                        if (newRSS |> Seq.length) = 0 then
+                            ()
+                        else
+                            newRSS
+                            |> this.CreateEmailBody
+                            |> (rssAggregate |> this.CreateEmailRecipients |> this.SendEmail)
+
+                            this.StoreRemoteRSS connectionString stoppingToken newRSS
+                    with (ex: exn) ->
+                        logger.LogInformation $"error RSSProcessingService.DoWork: {ex.Message}"
+                }
+
+module Worker =
+    /// A full background service using a dedicated type.
+    /// Ref: https://github.com/CompositionalIT/background-services
+    type SendEmailSubscription(logger: ILogger<unit>, service: IServiceProvider) =
+        inherit BackgroundService()
+
+        /// Called when the background service needs to run.
+        override this.ExecuteAsync(stoppingToken: CancellationToken) =
+            task {
+                logger.LogInformation "Background service start."
+                this.DoWork(stoppingToken) |> Async.AwaitTask |> ignore
+            }
+
+        member private this.DoWork(stoppingToken: CancellationToken) : Task =
+            task {
+                use scope = service.CreateScope()
+
+                let rssProcessingService =
+                    scope.ServiceProvider.GetRequiredService<RSSWorker.IRSSProcessingService>()
+
+                logger.LogInformation "Background service running."
+
+                while true do
+                    logger.LogInformation "Background service run."
+                    do! rssProcessingService.DoWork stoppingToken
+                    do! Task.Delay(hours24inMS, stoppingToken)
             }
 
         /// Called when a background service needs to gracefully shut down.
@@ -498,7 +604,20 @@ module Router =
 let app =
     application {
         use_static "wwwroot"
-        service_config (fun (s: IServiceCollection) -> s.AddHostedService<Worker.SendEmailSubscription>())
+
+        service_config (fun (s: IServiceCollection) ->
+            let configuration = s.BuildServiceProvider().GetService<IConfiguration>()
+
+            s.Configure<MailSettings>(configuration.GetSection(MailSettings.SettingName))
+            |> ignore
+
+            s.AddScoped<Mail.IMailService, Mail.MailService>() |> ignore
+
+            s.AddScoped<RSSWorker.IRSSProcessingService, RSSWorker.RSSProcessingService>()
+            |> ignore
+
+            s.AddHostedService<Worker.SendEmailSubscription>())
+
         use_router Router.defaultView
         memory_cache
         use_gzip
