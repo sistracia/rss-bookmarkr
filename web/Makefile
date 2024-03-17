@@ -13,19 +13,24 @@ style:
 migrate_up:
 	dotnet migrondi up --dry-run false
 
-publish_client:
+build_fable:
 	dotnet fable --noCache --cwd src/Client -o output
 
-publish_style:
+build_style:
 	bunx tailwindcss -i ./src/Client/input.css -o ./src/Client/output/output.css --minify
 
-build_style:
+build_client:
 	bunx vite build ./src/Client
 
-copy_client:
-	mv ./src/Client/dist wwwroot
+publish_client: build_fable build_style build_client
 
 publish_server:
 	dotnet publish src/Server -c Release -o publish
 
-publish_project: publish_client publish_style build_style copy_client publish_server
+copy_client:
+	cp -R ./src/Client/dist publish/wwwroot
+
+copy_email:
+	cp -R ./src/Server/Templates publish/Templates
+
+publish_project: publish_client publish_server copy_client copy_email

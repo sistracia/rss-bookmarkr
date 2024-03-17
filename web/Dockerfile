@@ -59,6 +59,7 @@ RUN bunx vite build ./src/Client
 # Build runtime image
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /App
+COPY --from=server-build /Server/publish .
+COPY --from=server-build /Server/src/Server/Templates Templates
 COPY --from=client-build /Client/src/Client/dist wwwroot
-COPY --from=server-build /Server/publish publish
-ENTRYPOINT ["dotnet", "publish/Server.dll"]
+ENTRYPOINT ["dotnet", "Server.dll"]
