@@ -3,6 +3,7 @@
 open System
 open Feliz
 open Elmish
+open Elmish.React
 open Elmish.Navigation
 open Elmish.UrlParser
 open Fable.Remoting.Client
