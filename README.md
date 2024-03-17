@@ -11,13 +11,7 @@ Bookmark your favorite RSS feeds.
 
 ### Why need Bun?
 
-Because the Client app use [Feliz](https://github.com/Zaid-Ajaj/Feliz) and it's resulting code that depends to React in the end.
-
-Also the Client app use [Daisy UI](https://daisyui.com/) ( [Feliz.DaisyUI](https://dzoukr.github.io/Feliz.DaisyUI/#/) ) and it's depends to [Tailwind](https://tailwindcss.com/).
-
-And some other tooling that need to be installed from NPM like [Elmish.Debbuger](https://github.com/elmish/debugger) depends to [remotedev](https://github.com/zalmoxisus/remotedev).
-
-The reaon to choose [Bun](https://github.com/oven-sh/bun) instead of `npm` or other package manage ([Node.js](https://nodejs.org/en)) is because [Bun](https://github.com/oven-sh/bun) is such a cool project.
+Because the Client app use [Feliz](https://github.com/Zaid-Ajaj/Feliz) and it's resulting code that depends to React in the end, also the Client app use [Daisy UI](https://daisyui.com/) ( [Feliz.DaisyUI](https://dzoukr.github.io/Feliz.DaisyUI/#/) ) and it's depends to [Tailwind](https://tailwindcss.com/), and some other tooling that need to be installed from NPM like [Elmish.Debbuger](https://github.com/elmish/debugger) depends to [remotedev](https://github.com/zalmoxisus/remotedev). The reason to choose [Bun](https://github.com/oven-sh/bun) instead of `npm` or other package manage ([Node.js](https://nodejs.org/en)) is because [Bun](https://github.com/oven-sh/bun) is such a cool project.
 
 ### Why need .NET?
 
@@ -79,7 +73,13 @@ cd web
 Create `.env` file, [see example](./web/.env.example).
 
 ```env
-DB_CONNECTION_STRING=<POSTGRES CONNECTION STRING>
+ConnectionStrings__RssDb=<POSTGRES CONNECTION STRING>
+MailSettings__Server=<YOUR MAIL SERVER HOST>
+MailSettings__Port=<YOUR MAIL SERVER PORT>
+MailSettings__SenderName=<YOUR_NAME>
+MailSettings__SenderEmail=<YOUR@EMAIL>
+MailSettings__UserName=<YOUR MAIL SERVER USERNAME>
+MailSettings__Password=<YOUR MAIL SERVER PASWORD>
 PORT=<PUBLISHED PORT FOR THE SERVER APP INSIDE Docker> # Used for docker-compose
 ASPNETCORE_URLS_PORT=<SERVER APP PORT INSIDE Docker>
 ASPNETCORE_URLS=<SERVER APP HOST AND PORT INSIDE Docker>
@@ -103,7 +103,13 @@ docker build -t rss-bookmarkr -f ./Dockerfile .
 docker run --env-file ./.env -p <PUBLISHD PORT>:<SERVER APP PORT INSIDE Docker> rss-bookmarkr
 ## or
 docker run \
--e DB_CONNECTION_STRING="POSTGRES CONNECTION STRING" \
+-e ConnectionStrings__RssDb="POSTGRES CONNECTION STRING" \
+-e MailSettings__Server=<YOUR MAIL SERVER HOST> \
+-e MailSettings__Port=<YOUR MAIL SERVER PORT> \
+-e MailSettings__SenderName=<YOUR_NAME> \
+-e MailSettings__SenderEmail=<YOUR@EMAIL> \
+-e MailSettings__UserName=<YOUR MAIL SERVER USERNAME> \
+-e MailSettings__Password=<YOUR MAIL SERVER PASWORD> \
 -e ASPNETCORE_URLS="<SERVER APP HOST AND PORT INSIDE Docker>" \
 -p <PUBLISHD PORT>:<SERVER APP PORT INSIDE Docker> \
 rss-bookmarkr
