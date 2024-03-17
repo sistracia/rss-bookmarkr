@@ -42,10 +42,10 @@ jobs:
           context: ./web
           file: ./web/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKER_REGISTRY }}/rss-fetchr:latest
+          tags: ${{ secrets.DOCKER_REGISTRY }}/rss-bookmarkr:latest
           labels: |
             com.centurylinklabs.watchtower.enable=true
       -
         name: Inspect
         run: |
-          docker buildx imagetools inspect ${{ secrets.DOCKER_REGISTRY }}/rss-fetchr:latest
+          docker buildx imagetools inspect ${{ secrets.DOCKER_REGISTRY }}/rss-bookmarkr:latest

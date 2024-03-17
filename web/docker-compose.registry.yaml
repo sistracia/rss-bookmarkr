@@ -1,6 +1,6 @@
 services:
   web:
-    build: .
+    image: localhost:5000/rss-bookmarkr
     container_name: rss-bookmarkr
     restart: unless-stopped
     ports:
