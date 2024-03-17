@@ -1,4 +1,5 @@
 open System
+open System.IO
 open System.Xml
 open System.Threading
 open System.Threading.Tasks
@@ -289,6 +290,7 @@ module DataAccess =
                           "@latest_updated", Sql.date DateTime.Now ]) ] ]
         |> ignore
 
+/// Ref: https://mailtrap.io/blog/asp-net-core-send-email/
 module Mail =
     type MailRecipient =
         { EmailToId: string
@@ -297,7 +299,8 @@ module Mail =
     type MailData =
         { EmailRecipients: MailRecipient array
           EmailSubject: string
-          EmailBody: string }
+          EmailTextBody: string
+          EmailHtmlBody: string }
 
     type IMailService =
         abstract member SendMail: mailData: MailData -> unit
@@ -320,7 +323,8 @@ module Mail =
 
                     emailMessage.Subject <- mailData.EmailSubject
                     let emailBodyBuilder = BodyBuilder()
-                    emailBodyBuilder.TextBody <- mailData.EmailBody
+                    emailBodyBuilder.HtmlBody <- mailData.EmailHtmlBody
+                    emailBodyBuilder.TextBody <- mailData.EmailTextBody
 
                     emailMessage.Body <- emailBodyBuilder.ToMessageBody()
 
@@ -401,18 +405,36 @@ module RSSWorker =
                         | Some(username: string) -> username })
             )
 
-        member private __.CreateEmailBody(newRSS: RSS seq) : string =
+        member private __.CreateEmailTextBody(newRSS: RSS seq) : string =
             newRSS |> Seq.map (fun (rss: RSS) -> rss.Title) |> String.concat ", "
 
+        member private __.CreateEmailHtmlBody(newRSS: RSS seq) : string =
+            let templateFilePath =
+                Directory.GetCurrentDirectory() + "/Templates/email-notification.html"
 
-        member private __.SendEmail (recipients: Mail.MailRecipient array) (body: string) =
+            let emailTemplateText = File.ReadAllText(templateFilePath)
+
+            let itemFilePath =
+                Directory.GetCurrentDirectory() + "/Templates/email-notification-item.html"
+
+            let itemText = File.ReadAllText(itemFilePath)
+
+            let emailBody =
+                newRSS
+                |> Seq.map (fun (rss: RSS) -> String.Format(itemText, rss.Link, rss.Title))
+                |> String.concat ""
+
+            emailTemplateText.Replace("{0}", emailBody)
+
+        member private __.SendEmail (recipients: Mail.MailRecipient array) (htmlBody: string, textBody: string) =
             use scope = service.CreateScope()
 
             let scopedMailService =
                 scope.ServiceProvider.GetRequiredService<Mail.IMailService>()
 
             let mailData =
-                { Mail.MailData.EmailBody = body
+                { Mail.MailData.EmailTextBody = textBody
+                  Mail.MailData.EmailHtmlBody = htmlBody
                   Mail.MailData.EmailSubject = "New RSS Release!"
                   Mail.MailData.EmailRecipients = recipients }
 
@@ -430,8 +452,7 @@ module RSSWorker =
                         if (newRSS |> Seq.length) = 0 then
                             ()
                         else
-                            newRSS
-                            |> this.CreateEmailBody
+                            (this.CreateEmailHtmlBody newRSS, this.CreateEmailTextBody newRSS)
                             |> (rssAggregate |> this.CreateEmailRecipients |> this.SendEmail)
 
                             this.StoreRemoteRSS connectionString stoppingToken newRSS
@@ -528,7 +549,7 @@ module Handler =
             return loginResponse
         }
 
-    let saveRSSUrls (connectionString: string) (userId: string, urls: string array) =
+    let saveRSSUrls (connectionString: string) (userId: string, urls: string array) : unit Async =
         async {
             let existingUrls = (DataAccess.getRSSUrls connectionString userId) |> List.toArray
 
