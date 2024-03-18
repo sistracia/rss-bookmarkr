@@ -421,7 +421,7 @@ module RSSWorker =
 
             let emailBody =
                 newRSS
-                |> Seq.map (fun (rss: RSS) -> String.Format(itemText, rss.Link, rss.Title))
+                |> Seq.map (fun (rss: RSS) -> String.Format(itemText, rss.Link, rss.Title, rss.OriginHostUrl, rss.OriginHost))
                 |> String.concat ""
 
             emailTemplateText.Replace("{0}", emailBody)

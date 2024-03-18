@@ -10,6 +10,12 @@ type RSS =
       TimeAgo: string
       Link: string }
 
+    member this.OriginHost = (Uri this.Origin).Host
+
+    member this.OriginHostUrl =
+        let uri = (Uri this.Origin)
+        sprintf $"{uri.Scheme}://{uri.Host}"
+
 [<Struct>]
 type LoginForm = { Username: string; Password: string }
 

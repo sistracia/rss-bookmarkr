@@ -305,6 +305,11 @@ module RSS =
                                               prop.children
                                                   [ Daisy.cardBody
                                                         [ Daisy.cardTitle rss.Title
+                                                          Daisy.link
+                                                              [ prop.href rss.OriginHostUrl
+                                                                prop.target "_blank"
+                                                                prop.rel "noopener"
+                                                                prop.text rss.OriginHost ]
                                                           Html.p (
                                                               sprintf
                                                                   $"{rss.LastUpdatedTime.ToString()} ({rss.TimeAgo})"
