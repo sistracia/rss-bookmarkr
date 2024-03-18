@@ -295,6 +295,7 @@ module RSS =
                                               prop.className "flex flex-col gap-3 p-8"
                                               prop.children
                                                   [ Daisy.skeleton [ prop.className "h-6 w-full" ]
+                                                    Daisy.skeleton [ prop.className "h-4 w-1/4" ]
                                                     Daisy.skeleton [ prop.className "h-4 w-1/2" ]
                                                     Daisy.skeleton [ prop.className "h-4 w-1/4" ] ] ] ]
                           | Idle ->
