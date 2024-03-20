@@ -4,6 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "start:server": "make server",
+    "start:client": "concurrently \"make style\" \"make client\"",
     "start": "concurrently \"make server\" \"make style\" \"make client\""
   },
   "devDependencies": {
