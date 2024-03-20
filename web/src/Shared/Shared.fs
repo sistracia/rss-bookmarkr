@@ -6,7 +6,7 @@ open System
 type RSS =
     { Origin: string
       Title: string
-      LastUpdatedTime: DateTime
+      PublishDate: DateTime
       TimeAgo: string
       Link: string }
 

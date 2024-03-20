@@ -118,8 +118,8 @@ module RSS =
     let mapSydicatoinItem (originURL: string) (item: SyndicationItem) : RSS =
         { RSS.Origin = originURL
           RSS.Title = item.Title.Text
-          RSS.LastUpdatedTime = item.LastUpdatedTime.DateTime
-          RSS.TimeAgo = TimeAgo.getTimeAgo item.LastUpdatedTime.DateTime
+          RSS.PublishDate = item.PublishDate.DateTime
+          RSS.TimeAgo = TimeAgo.getTimeAgo item.PublishDate.DateTime
           RSS.Link =
             match item.Links |> Seq.tryHead with
             | Some first -> first.Uri.AbsoluteUri
@@ -372,7 +372,7 @@ module RSSWorker =
 
             let existFinder (rssAggregate: RssEmailsAggregate) =
                 rssAggregate.Url <> remoteRSS.Link
-                && compareLatest remoteRSS.LastUpdatedTime rssAggregate.LatestUpdated
+                && compareLatest remoteRSS.PublishDate rssAggregate.LatestUpdated
 
             (storedRSSes |> Seq.exists existFinder)
 
@@ -506,7 +506,7 @@ module Handler =
                     | Choice1Of2 rss -> rss
                     | Choice2Of2 _ -> Seq.empty)
                 |> Seq.fold (fun acc elem -> Seq.concat [ acc; elem ]) []
-                |> Seq.sortByDescending _.LastUpdatedTime
+                |> Seq.sortByDescending _.PublishDate
         }
 
     let register (connectionString: string) (sessionId: string) (loginForm: LoginForm) : LoginResponse =

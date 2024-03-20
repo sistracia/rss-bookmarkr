@@ -313,7 +313,7 @@ module RSS =
                                                                 prop.text rss.OriginHost ]
                                                           Html.p (
                                                               sprintf
-                                                                  $"{rss.LastUpdatedTime.ToString()} ({rss.TimeAgo})"
+                                                                  $"{rss.PublishDate.ToString()} ({rss.TimeAgo})"
                                                           )
                                                           Daisy.cardActions
                                                               [ Daisy.link
