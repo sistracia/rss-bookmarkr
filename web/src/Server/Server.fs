@@ -294,6 +294,7 @@ module DataAccess =
         |> Sql.executeNonQuery
         |> ignore
 
+    // Upsert the RSS histories
     let renewRSSHistories
         (cancellationToken: CancellationToken)
         (connectionString: string)
@@ -303,8 +304,11 @@ module DataAccess =
         |> Sql.connect
         |> Sql.cancellationToken cancellationToken
         |> Sql.executeTransaction
-            [ "TRUNCATE rss_histories", []
-              "INSERT INTO rss_histories (id, url, latest_title, latest_updated) VALUES (@id, @url, @latest_title, @latest_updated)",
+            [ """INSERT INTO rss_histories (id, url, latest_title, latest_updated) 
+                            VALUES (@id, @url, @latest_title, @latest_updated)
+                            ON CONFLICT (url)
+                                DO UPDATE 
+                                    SET latest_title=EXCLUDED.latest_title, latest_updated=EXCLUDED.latest_updated""",
               [ yield!
                     newRSSHistories
                     |> Seq.map (fun (rss: RSSHistory) ->
@@ -406,30 +410,12 @@ module RSSWorker =
             (connectionString: string)
             (stoppingToken: CancellationToken)
             (remoteRSSes: RSS seq)
-            (storedRSSes: RSSEmailsAggregate list)
             =
-            let mutable remoteLookup =
-                remoteRSSes
-                |> Seq.map (fun (remoteRSS: RSS) ->
-                    (remoteRSS.Origin,
-                     { RSSHistory.Url = remoteRSS.Origin
-                       RSSHistory.LatestTitle = remoteRSS.Title }))
-                |> Map.ofSeq
-
-            storedRSSes
-            |> List.map (fun (storedRSS: RSSEmailsAggregate) ->
-                let storedRSSUrl = storedRSS.Url
-
-                match remoteLookup |> (Map.tryFind storedRSSUrl) with
-                | None ->
-                    { RSSHistory.Url = storedRSS.Url
-                      RSSHistory.LatestTitle = storedRSS.LatestTitle }
-                | Some(newRemoteRSS: RSSHistory) ->
-                    remoteLookup <- remoteLookup |> Map.remove storedRSSUrl
-                    newRemoteRSS)
-            |> List.append (remoteLookup |> Map.values |> Seq.toList)
+            remoteRSSes
+            |> Seq.map (fun (remoteRSS: RSS) ->
+                { RSSHistory.Url = remoteRSS.Origin
+                  RSSHistory.LatestTitle = remoteRSS.Title })
             |> DataAccess.renewRSSHistories stoppingToken connectionString
-
 
         member private __.CreateEmailRecipients(rssAggregate: RSSEmailsAggregate list) : Mail.MailRecipient array =
             (rssAggregate |> List.map (fun (r) -> r.Emails) |> String.concat ", ")
@@ -489,7 +475,7 @@ module RSSWorker =
                             (this.CreateEmailHtmlBody newRSS, this.CreateEmailTextBody newRSS)
                             |> (rssAggregate |> this.CreateEmailRecipients |> this.SendEmail)
 
-                            this.StoreRemoteRSS connectionString stoppingToken newRSS rssAggregate
+                            this.StoreRemoteRSS connectionString stoppingToken newRSS
                     with (ex: exn) ->
                         logger.LogInformation $"error RSSProcessingService.DoWork: {ex.Message}"
                 }
