@@ -21,7 +21,7 @@ RUN dotnet paket restore
 COPY . .
 
 # Build and publish a release
-RUN dotnet fable --noCache --cwd src/Client -o output
+RUN dotnet fable --cwd src/Client -o output
 RUN dotnet publish src/Server -c Release -o publish
 
 ## Client Build Area

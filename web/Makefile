@@ -14,7 +14,7 @@ migrate_up:
 	dotnet migrondi up --dry-run false
 
 build_fable:
-	dotnet fable --noCache --cwd src/Client -o output
+	dotnet fable --cwd src/Client -o output
 
 build_style:
 	bunx tailwindcss -i ./src/Client/input.css -o ./src/Client/output/output.css --minify
@@ -34,3 +34,6 @@ copy_email:
 	cp -R ./src/Server/Templates publish/Templates
 
 publish_project: publish_client publish_server copy_client copy_email
+
+test_e2e:
+	docker compose -f docker-compose.e2e.yaml up --build --abort-on-container-exit --exit-code-from e2e && docker compose down

@@ -9,6 +9,7 @@
     "start": "concurrently \"make server\" \"make style\" \"make client\""
   },
   "devDependencies": {
+    "@playwright/test": "^1.42.1",
     "@types/node": "^20.11.18",
     "@vitejs/plugin-react": "^4.2.1",
     "concurrently": "^8.2.2",

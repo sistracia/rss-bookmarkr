@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16.2-bullseye
+    environment:
+      POSTGRES_PASSWORD: mypassword
+    ports:
+      - "5432:5432"
+  e2e:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.e2e
+    command: >
+      pg_isready -d postgres -h db -p 5432 -U postgres
+    depends_on:
+      - db
