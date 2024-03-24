@@ -23,6 +23,26 @@ let rssDbConnectionStringKey = "RssDb"
 
 let hours24inMS = 1000 * 60 * 60 * 24
 
+/// A full background service using a dedicated type.
+/// Ref: https://github.com/CompositionalIT/background-services
+type ApplicationBuilder with
+
+    /// Custom keyword to more easily add a background worker to ASP .NET
+    [<CustomOperation "background_service">]
+    member _.BackgroundService(state: ApplicationState, serviceBuilder) =
+        { state with
+            ServicesConfig =
+                (fun svcCollection -> svcCollection.AddHostedService serviceBuilder)
+                :: state.ServicesConfig }
+
+    member this.BackgroundService(state: ApplicationState, backgroundSvc) =
+        let worker serviceProvider =
+            { new BackgroundService() with
+                member _.ExecuteAsync cancellationToken =
+                    backgroundSvc serviceProvider cancellationToken }
+
+        this.BackgroundService(state, worker)
+
 /// Ref: https://github.com/CompositionalIT/TodoService/blob/main/src/app/Todo.Api.fs
 type HttpContext with
 
@@ -309,8 +329,7 @@ module Mail =
     type IMailService =
         abstract member SendMail: mailData: MailData -> unit
 
-    type MailService(logger: ILogger<unit>, mailSettingsOptions: IOptions<MailSettings>) =
-        let mailSettings: MailSettings = mailSettingsOptions.Value
+    type MailService(mailSettings: MailSettings, logger: ILogger<unit>) =
 
         interface IMailService with
             member __.SendMail(mailData: MailData) =
@@ -351,8 +370,7 @@ module RSSWorker =
     type IRSSProcessingService =
         abstract member DoWork: stoppingToken: CancellationToken -> Task
 
-    type RSSProcessingService(configuration: IConfiguration, logger: ILogger<unit>, service: IServiceProvider) =
-        let connectionString = (configuration.GetConnectionString rssDbConnectionStringKey)
+    type RSSProcessingService(connectionString: string, mailService: Mail.IMailService, logger: ILogger<unit>) =
 
         member private __.GetRSSAggregate
             (connectionString: string)
@@ -448,18 +466,13 @@ module RSSWorker =
             emailTemplateText.Replace("{0}", emailBody)
 
         member private __.SendEmail (recipients: Mail.MailRecipient array) (htmlBody: string, textBody: string) =
-            use scope = service.CreateScope()
-
-            let scopedMailService =
-                scope.ServiceProvider.GetRequiredService<Mail.IMailService>()
-
             let mailData =
                 { Mail.MailData.EmailTextBody = textBody
                   Mail.MailData.EmailHtmlBody = htmlBody
                   Mail.MailData.EmailSubject = "New RSS Release!"
                   Mail.MailData.EmailRecipients = recipients }
 
-            scopedMailService.SendMail mailData
+            mailService.SendMail mailData
 
         interface IRSSProcessingService with
 
@@ -482,9 +495,9 @@ module RSSWorker =
                 }
 
 module Worker =
-    /// A full background service using a dedicated type.
-    /// Ref: https://github.com/CompositionalIT/background-services
-    type SendEmailSubscription(logger: ILogger<unit>, service: IServiceProvider) =
+
+    type SendEmailSubscription(delay: int, rssProcessingService: RSSWorker.IRSSProcessingService, logger: ILogger<unit>)
+        =
         inherit BackgroundService()
 
         /// Called when the background service needs to run.
@@ -494,19 +507,14 @@ module Worker =
                 this.DoWork(stoppingToken) |> Async.AwaitTask |> ignore
             }
 
-        member private this.DoWork(stoppingToken: CancellationToken) : Task =
+        member private _.DoWork(stoppingToken: CancellationToken) : Task =
             task {
-                use scope = service.CreateScope()
-
-                let rssProcessingService =
-                    scope.ServiceProvider.GetRequiredService<RSSWorker.IRSSProcessingService>()
-
                 logger.LogInformation "Background service running."
 
                 while true do
                     logger.LogInformation "Background service run."
                     do! rssProcessingService.DoWork stoppingToken
-                    do! Task.Delay(hours24inMS, stoppingToken)
+                    do! Task.Delay(delay, stoppingToken)
             }
 
         /// Called when a background service needs to gracefully shut down.
@@ -647,18 +655,22 @@ let app =
     application {
         use_static "wwwroot"
 
-        service_config (fun (s: IServiceCollection) ->
-            let configuration = s.BuildServiceProvider().GetService<IConfiguration>()
+        background_service (fun (serviceProvider: IServiceProvider) ->
+            let configuration = serviceProvider.GetService<IConfiguration>()
 
-            s.Configure<MailSettings>(configuration.GetSection(MailSettings.SettingName))
-            |> ignore
+            let logger = serviceProvider.GetService<ILogger<unit>>()
 
-            s.AddScoped<Mail.IMailService, Mail.MailService>() |> ignore
+            let connectionString = (configuration.GetConnectionString rssDbConnectionStringKey)
 
-            s.AddScoped<RSSWorker.IRSSProcessingService, RSSWorker.RSSProcessingService>()
-            |> ignore
+            let mailSettings =
+                configuration.GetSection(MailSettings.SettingName).Get<MailSettings>()
 
-            s.AddHostedService<Worker.SendEmailSubscription>())
+            let mailService = Mail.MailService(mailSettings, logger)
+
+            let rssProcessingService =
+                RSSWorker.RSSProcessingService(connectionString, mailService, logger)
+
+            new Worker.SendEmailSubscription(hours24inMS, rssProcessingService, logger))
 
         use_router Router.defaultView
         memory_cache
