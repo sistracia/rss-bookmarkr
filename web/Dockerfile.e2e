@@ -48,5 +48,3 @@ COPY migrations/ ./migrations/
 
 COPY playwright.config.ts .
 COPY tests/ ./tests/
-
-RUN apt update && apt install -y --no-install-recommends postgresql-client
