@@ -35,5 +35,10 @@ copy_email:
 
 publish_project: publish_client publish_server copy_client copy_email
 
-test_e2e:
-	docker compose -f docker-compose.e2e.yaml up --build --abort-on-container-exit --exit-code-from e2e && docker compose down
+test_e2e_setup:
+	docker compose -f docker-compose.e2e.yaml up --build --abort-on-container-exit --exit-code-from e2e
+
+test_e2e_teardown:
+	docker compose -f docker-compose.e2e.yaml down
+
+test_e2e: test_e2e_setup test_e2e_teardown
