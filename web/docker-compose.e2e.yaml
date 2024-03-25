@@ -14,7 +14,7 @@ services:
       dockerfile: ./Dockerfile.e2e
     command: >
       bash -c "dotnet migrondi up --dry-run false
-      && npx playwright test"
+      && bunx playwright test -x --reporter list"
     depends_on:
       db:
         condition: service_healthy

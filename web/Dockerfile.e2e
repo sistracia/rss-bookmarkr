@@ -13,12 +13,6 @@ RUN rm packages-microsoft-prod.deb
 
 RUN apt update && apt install -y --no-install-recommends dotnet-sdk-${DOTNET_VERSION}
 
-# ENV BUN_VERSION=1.0.35
-
-# RUN curl -fsSL https://bun.sh/install | bash -s "bun-v${BUN_VERSION}"
-
-# ENV PATH="/root/.bun/bin:${PATH}"
-
 ENV NODE_VERSION=21.4.0
 
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
@@ -28,6 +22,11 @@ RUN . "$NVM_DIR/nvm.sh" && nvm use v${NODE_VERSION}
 RUN . "$NVM_DIR/nvm.sh" && nvm alias default v${NODE_VERSION}
 ENV PATH="/root/.nvm/versions/node/v${NODE_VERSION}/bin/:${PATH}"
 
+ENV BUN_VERSION=1.0.35
+
+RUN curl -fsSL https://bun.sh/install | bash -s "bun-v${BUN_VERSION}"
+ENV PATH="/root/.bun/bin:${PATH}"
+
 RUN rm -rf /var/lib/apt/lists/*
 
 COPY *.sln .
@@ -36,12 +35,11 @@ COPY .config/ ./.config/
 RUN dotnet tool restore
 
 COPY package.json .
-# COPY bun.lockb .
+COPY bun.lockb .
 
-# RUN bun install
-# RUN bunx -y playwright@1.42.1 install --with-deps
-RUN npm install
-RUN npx -y playwright@1.42.1 install --with-deps
+RUN bunx playwright@1.42.1 install
+RUN bunx playwright@1.42.1 install-deps
+RUN bun install
 
 COPY migrondi.e2e.json migrondi.json
 COPY migrations/ ./migrations/
