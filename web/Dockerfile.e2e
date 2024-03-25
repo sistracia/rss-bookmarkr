@@ -1,15 +1,11 @@
 FROM ubuntu:jammy-20240227
 
-ENV DOTNET_VERSION=6.0
-
 RUN apt update && apt install -y --no-install-recommends wget
 RUN apt update && apt install -y --no-install-recommends ca-certificates
 RUN apt update && apt install -y --no-install-recommends curl
 RUN apt update && apt install -y --no-install-recommends unzip
 
-RUN wget -q https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
-RUN dpkg -i packages-microsoft-prod.deb
-RUN rm packages-microsoft-prod.deb
+ENV DOTNET_VERSION=6.0
 
 RUN apt update && apt install -y --no-install-recommends dotnet-sdk-${DOTNET_VERSION}
 
@@ -26,8 +22,6 @@ ENV BUN_VERSION=1.0.35
 
 RUN curl -fsSL https://bun.sh/install | bash -s "bun-v${BUN_VERSION}"
 ENV PATH="/root/.bun/bin:${PATH}"
-
-RUN rm -rf /var/lib/apt/lists/*
 
 COPY *.sln .
 COPY .config/ ./.config/
