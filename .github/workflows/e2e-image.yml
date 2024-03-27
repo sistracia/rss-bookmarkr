@@ -27,7 +27,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}-e2e
+          images: ghcr.io/${{ github.repository }}:e2e
 
       - name: Build and push Docker images
         uses: docker/build-push-action@v5
