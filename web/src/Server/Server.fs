@@ -21,7 +21,6 @@ open Shared
 
 let rssDbConnectionStringKey = "RssDb"
 
-let hours24inMS = 1000 * 60 * 60 * 24
 
 /// A full background service using a dedicated type.
 /// Ref: https://github.com/CompositionalIT/background-services
@@ -497,9 +496,17 @@ module Worker =
             task {
                 logger.LogInformation "Background service running."
 
+                let mutable isSend = false
+
                 while true do
                     logger.LogInformation "Background service run."
-                    do! rssProcessingService.DoWork stoppingToken
+
+                    if DateTime.Now.Hour = 0 && not isSend then
+                        do! rssProcessingService.DoWork stoppingToken
+                        isSend <- true
+                    else if DateTime.Now.Hour <> 0 then
+                        isSend <- false
+
                     do! Task.Delay(delay, stoppingToken)
             }
 
@@ -656,7 +663,9 @@ let app =
             let rssProcessingService =
                 RSSWorker.RSSProcessingService(connectionString, mailService, logger)
 
-            new Worker.SendEmailSubscription(hours24inMS, rssProcessingService, logger))
+            let minutesInMS = 1000 * 60
+
+            new Worker.SendEmailSubscription(minutesInMS, rssProcessingService, logger))
 
         use_router Router.defaultView
         memory_cache
