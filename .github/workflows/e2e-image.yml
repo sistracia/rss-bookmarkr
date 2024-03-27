@@ -32,7 +32,7 @@ jobs:
       - name: Build and push Docker images
         uses: docker/build-push-action@v5
         with:
-          context: .
-          push: true
+          context: ./web
+          file: ./web/Dockerfile.e2e
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
