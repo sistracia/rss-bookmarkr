@@ -9,12 +9,10 @@ services:
       timeout: 5s
       retries: 5
   e2e:
-    build:
-      context: .
-      dockerfile: ./Dockerfile.e2e
+    image: ghcr.io/sistracia/rss-bookmarkr-e2e:main
     command: >
       bash -c "dotnet migrondi up --dry-run false
-      && bunx playwright test -x --reporter list"
+      && npx playwright test -x --reporter list"
     depends_on:
       db:
         condition: service_healthy

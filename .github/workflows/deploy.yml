@@ -1,9 +1,9 @@
-name: cd
+name: Deploy
 
 on:
   push:
-    branches:
-      - "main"
+    tags:
+      - '**'
 
 jobs:
   deployment:
@@ -35,13 +35,6 @@ jobs:
             [registry."${{ secrets.DOCKER_REGISTRY }}"]
               http = true
               insecure = true
-      -
-        name: Run end-to-end testing
-        run: docker compose -f ./web/docker-compose.e2e.yaml up --build --abort-on-container-exit --exit-code-from e2e
-      - 
-        name: Teardown end-to-end testing
-        if: always()
-        run: docker compose -f ./web/docker-compose.e2e.yaml down
       -
         name: Build and push to local registry
         uses: docker/build-push-action@v5

@@ -1,0 +1,21 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  deployment:
+    runs-on: ubuntu-22.04
+    steps:
+      - 
+        name: Checkout
+        uses: actions/checkout@v4
+      -
+        name: Run end-to-end testing
+        run: docker compose -f ./web/docker-compose.e2e.yaml up --build --abort-on-container-exit --exit-code-from e2e
+      - 
+        name: Teardown end-to-end testing
+        if: always()
+        run: docker compose -f ./web/docker-compose.e2e.yaml down
