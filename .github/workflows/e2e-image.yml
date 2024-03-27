@@ -34,5 +34,6 @@ jobs:
         with:
           context: ./web
           file: ./web/Dockerfile.e2e
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
