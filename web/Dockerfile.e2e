@@ -40,3 +40,5 @@ COPY migrations/ ./migrations/
 
 COPY playwright.config.ts .
 COPY tests/ ./tests/
+
+# Trigger GitHub Action
