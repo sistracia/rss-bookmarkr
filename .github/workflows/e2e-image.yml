@@ -2,8 +2,19 @@ name: End 2 End Docker Image
 
 on:
   push:
+    branches:
+      - main
     paths:
       - 'web/Dockerfile.e2e'
+      - 'web/**'
+      - 'web/**.sln'
+      - 'web/.config/**'
+      - 'web/package.json'
+      - 'web/bun.lockb'
+      - 'web/migrondi.e2e.json'
+      - 'web/migrations/**'
+      - 'web/playwright.config.ts'
+      - 'web/tests/**'
 
 jobs:
   push_to_registries:
