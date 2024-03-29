@@ -6,7 +6,6 @@ on:
       - main
     paths:
       - 'web/Dockerfile.e2e'
-      - 'web/**'
       - 'web/**.sln'
       - 'web/.config/**'
       - 'web/package.json'
