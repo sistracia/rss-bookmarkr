@@ -24,7 +24,7 @@ type LoginResult =
     { UserId: string
       RssUrls: string array
       SessionId: string
-      IsSubscribing: bool }
+      Email: string }
 
 [<Struct>]
 type LoginError = { Message: string }

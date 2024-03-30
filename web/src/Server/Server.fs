@@ -57,8 +57,6 @@ type User =
       Password: string
       Email: string }
 
-    member this.IsSubscribing = this.Email <> ""
-
 type RSSUrl =
     { Id: string
       Url: string
@@ -299,11 +297,11 @@ module DataAccess =
         |> Sql.executeNonQuery
         |> ignore
 
-    let unsetUserEmail (connectionString: string) (userId: string) =
+    let unsetUserEmail (connectionString: string) (email: string) =
         connectionString
         |> Sql.connect
-        |> Sql.query "UPDATE users SET email = @email WHERE id = @id"
-        |> Sql.parameters [ "@id", Sql.text userId; "@email", Sql.text "" ]
+        |> Sql.query "UPDATE users SET email = '' WHERE email = @email"
+        |> Sql.parameters [ "@email", Sql.text email ]
         |> Sql.executeNonQuery
         |> ignore
 
@@ -586,7 +584,7 @@ module Handler =
             { LoginResult.UserId = userId
               LoginResult.RssUrls = Array.empty
               LoginResult.SessionId = sessionId
-              LoginResult.IsSubscribing = false }
+              LoginResult.Email = "" }
 
         Success loginResult
 
@@ -596,7 +594,7 @@ module Handler =
                 { LoginResult.UserId = user.Id
                   LoginResult.RssUrls = (DataAccess.getRSSUrls connectionString user.Id) |> List.toArray
                   LoginResult.SessionId = sessionId
-                  LoginResult.IsSubscribing = user.IsSubscribing }
+                  LoginResult.Email = user.Email }
 
             Success loginResult
         else
@@ -650,7 +648,7 @@ module Handler =
                         { LoginResult.UserId = user.Id
                           LoginResult.RssUrls = (DataAccess.getRSSUrls connectionString user.Id) |> List.toArray
                           LoginResult.SessionId = sessionId
-                          LoginResult.IsSubscribing = user.IsSubscribing }
+                          LoginResult.Email = user.Email }
 
                     Success loginResult)
         }
@@ -666,8 +664,8 @@ module Handler =
             (DataAccess.setUserEmail connectionString userId email) |> ignore
         }
 
-    let unsubscribe (connectionString: string) (userId: string) : unit Async =
-        async { (DataAccess.unsetUserEmail connectionString userId) |> ignore }
+    let unsubscribe (connectionString: string) (email: string) : unit Async =
+        async { (DataAccess.unsetUserEmail connectionString email) |> ignore }
 
     let rssIndexAction (ctx: HttpContext) =
         task {

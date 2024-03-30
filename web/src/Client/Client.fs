@@ -19,7 +19,10 @@ open Elmish.HMR
 type User =
     { UserId: string
       SessionId: string
-      IsSubscribing: bool }
+      Email: string }
+
+    member this.IsSubscribing = this.Email <> ""
+
 
 /// Copy from https://github.com/Dzoukr/Yobo/blob/master/src/Yobo.Client/TokenStorage.fs
 module Session =
@@ -61,7 +64,7 @@ module RPC =
     let subscribe (userId: string, email: string) : unit Async =
         async { do! store.subscribe (userId, email) }
 
-    let unsubscribe (userId: string) : unit Async = async { do! store.unsubscribe userId }
+    let unsubscribe (email: string) : unit Async = async { do! store.unsubscribe email }
 
 module Component =
     let renderError (error: string option) : Fable.React.ReactElement =
@@ -106,9 +109,9 @@ module RSS =
         | ChangeEmail of string
         | Subscribe of userId: string
         | OnSubscribed of unit
-        | Unsubscribe of userId: string
+        | Unsubscribe of email: string
         | OnUnsubscribe of unit
-        | SubscriptionChange
+        | SubscriptionChange of email: string
 
     let init () =
         let initialState =
@@ -183,12 +186,12 @@ module RSS =
             state, Cmd.OfAsync.either RPC.subscribe (userId, state.Email) OnSubscribed ofError
         | OnSubscribed() ->
             let nextState = { state with Email = "" }
-            nextState, SubscriptionChange |> Cmd.ofMsg
-        | Unsubscribe(userId: string) ->
+            nextState, SubscriptionChange state.Email |> Cmd.ofMsg
+        | Unsubscribe(email: string) ->
             let ofError = fun (ex: exn) -> Some ex.Message |> SetError
-            state, Cmd.OfAsync.either RPC.unsubscribe userId OnUnsubscribe ofError
-        | OnUnsubscribe() -> state, SubscriptionChange |> Cmd.ofMsg
-        | SubscriptionChange -> state, Cmd.none
+            state, Cmd.OfAsync.either RPC.unsubscribe email OnUnsubscribe ofError
+        | OnUnsubscribe() -> state, SubscriptionChange "" |> Cmd.ofMsg
+        | SubscriptionChange(_: string) -> state, Cmd.none
         | SetError(error: string option) ->
             let nextState = { state with Error = error }
             nextState, Cmd.none
@@ -235,7 +238,7 @@ module RSS =
                                   if user.IsSubscribing then
                                       Daisy.button.button
                                           [ button.link
-                                            prop.onClick (fun _ -> dispatch (Unsubscribe user.UserId))
+                                            prop.onClick (fun _ -> dispatch (Unsubscribe user.Email))
                                             prop.text "Unsubscribe" ]
                                   else
                                       React.fragment
@@ -312,8 +315,7 @@ module RSS =
                                                                 prop.rel "noopener"
                                                                 prop.text rss.OriginHost ]
                                                           Html.p (
-                                                              sprintf
-                                                                  $"{rss.PublishDate.ToString()} ({rss.TimeAgo})"
+                                                              sprintf $"{rss.PublishDate.ToString()} ({rss.TimeAgo})"
                                                           )
                                                           Daisy.cardActions
                                                               [ Daisy.link
@@ -506,15 +508,12 @@ let update (msg: Msg) (state: State) : State * Cmd<Msg> =
     match msg with
     | RSSMsg(rssMsg: RSS.Msg) ->
         match rssMsg with
-        | RSS.SubscriptionChange ->
+        | RSS.SubscriptionChange(email: string) ->
             let user =
                 match state.User with
                 | None -> state.User
                 | Some(user: User) ->
-                    let newUser =
-                        { user with
-                            IsSubscribing = not user.IsSubscribing }
-
+                    let newUser = { user with Email = email }
                     Some newUser
 
             let nextState = { state with User = user }
@@ -535,7 +534,7 @@ let update (msg: Msg) (state: State) : State * Cmd<Msg> =
                 let user =
                     { User.SessionId = loginResult.SessionId
                       User.UserId = loginResult.UserId
-                      User.IsSubscribing = loginResult.IsSubscribing }
+                      User.Email = loginResult.Email }
 
                 let nextState =
                     { state with
