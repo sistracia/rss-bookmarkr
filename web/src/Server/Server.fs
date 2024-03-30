@@ -66,11 +66,14 @@ type RSSUrl =
 
 type RSSHistory = { Url: string; LatestTitle: string }
 
-type RSSEmailsAggregate =
+type RSSHistoryPair =
     { Url: string
-      Emails: string
       LatestTitle: string
       LatestUpdated: DateTime }
+
+type RSSEmailsAggregate =
+    { Email: string
+      HistoryPairs: RSSHistoryPair option array }
 
 type MailSettings() =
     static member SettingName = "MailSettings"
@@ -264,26 +267,29 @@ module DataAccess =
         |> Sql.connect
         |> Sql.cancellationToken cancellationToken
         |> Sql.query
-            """SELECT * FROM (
-                        SELECT
-                            ru.url AS url,
-                            STRING_AGG(u.email, ', ') AS emails,
-                            rh.latest_title AS latest_title,
-                            rh.latest_updated AS latest_updated
-                        FROM rss_urls ru
-                        LEFT JOIN users u
-                            ON u.id = ru.user_id
-                            AND  u.email != ''
-                        LEFT JOIN rss_histories rh
-                            ON rh.url = ru.url
-                        GROUP BY ru.url, rh.latest_title, rh.latest_updated
-                    ) AS aggregates
-                    WHERE aggregates.latest_title IS NOT NULL"""
+            """SELECT
+                        u.email,
+                        ARRAY_AGG(ru.url || '|' || rh.latest_title || '|' || rh.latest_updated) AS history_pairs
+                    FROM
+                        users u
+                    JOIN
+                        rss_urls ru ON u.id = ru.user_id 
+                    JOIN
+                        rss_histories rh ON ru .url = rh.url
+                    GROUP BY
+                        u.email;"""
         |> Sql.execute (fun read ->
-            { RSSEmailsAggregate.Url = read.string "url"
-              RSSEmailsAggregate.Emails = read.text "emails"
-              RSSEmailsAggregate.LatestTitle = read.text "latest_title"
-              RSSEmailsAggregate.LatestUpdated = read.dateTime "latest_updated" })
+            { RSSEmailsAggregate.Email = read.text "email"
+              RSSEmailsAggregate.HistoryPairs =
+                (read.stringArray "history_pairs")
+                |> Array.map (fun (pair: string) ->
+                    match pair.Split("|") with
+                    | [| url: string; latestTitle: string; latestUpdated: string |] ->
+                        Some
+                            { RSSHistoryPair.Url = url
+                              RSSHistoryPair.LatestTitle = latestTitle
+                              RSSHistoryPair.LatestUpdated = DateTime.Parse latestUpdated }
+                    | _ -> None) })
 
     let setUserEmail (connectionString: string) (userId: string) (email: string) =
         connectionString
@@ -291,6 +297,30 @@ module DataAccess =
         |> Sql.query "UPDATE users SET email = @email WHERE id = @id"
         |> Sql.parameters [ "@id", Sql.text userId; "@email", Sql.text email ]
         |> Sql.executeNonQuery
+        |> ignore
+
+    let unsetUserEmail (connectionString: string) (userId: string) =
+        connectionString
+        |> Sql.connect
+        |> Sql.query "UPDATE users SET email = @email WHERE id = @id"
+        |> Sql.parameters [ "@id", Sql.text userId; "@email", Sql.text "" ]
+        |> Sql.executeNonQuery
+        |> ignore
+
+    let insertRSSHistories (connectionString: string) (newRSSHistories: RSSHistory seq) =
+        connectionString
+        |> Sql.connect
+        |> Sql.executeTransaction
+            [ """INSERT INTO rss_histories (id, url, latest_title, latest_updated) 
+                            VALUES (@id, @url, @latest_title, @latest_updated)
+                            ON CONFLICT (url) DO NOTHING""",
+              [ yield!
+                    newRSSHistories
+                    |> Seq.map (fun (rss: RSSHistory) ->
+                        [ "@id", Sql.text (Guid.NewGuid().ToString())
+                          "@url", Sql.text rss.Url
+                          "@latest_title", Sql.text rss.LatestTitle
+                          "@latest_updated", Sql.date DateTime.Now ]) ] ]
         |> ignore
 
     // Upsert the RSS histories
@@ -324,7 +354,7 @@ module Mail =
           EmailToName: string }
 
     type MailData =
-        { EmailRecipients: MailRecipient array
+        { EmailRecipient: MailRecipient
           EmailSubject: string
           EmailTextBody: string
           EmailHtmlBody: string }
@@ -336,37 +366,34 @@ module Mail =
 
         interface IMailService with
             member __.SendMail(mailData: MailData) =
-                try
-                    use emailMessage = new MimeMessage()
-                    let emailFrom = MailboxAddress(mailSettings.SenderName, mailSettings.SenderEmail)
-                    emailMessage.From.Add(emailFrom)
+                use emailMessage = new MimeMessage()
+                let emailFrom = MailboxAddress(mailSettings.SenderName, mailSettings.SenderEmail)
+                emailMessage.From.Add(emailFrom)
 
-                    mailData.EmailRecipients
-                    |> Array.iter (fun (mailRecipient: MailRecipient) ->
-                        let emailTo = MailboxAddress(mailRecipient.EmailToName, mailRecipient.EmailToId)
-                        emailMessage.To.Add(emailTo))
+                let emailTo =
+                    MailboxAddress(mailData.EmailRecipient.EmailToName, mailData.EmailRecipient.EmailToId)
 
+                emailMessage.To.Add(emailTo)
 
-                    emailMessage.Subject <- mailData.EmailSubject
-                    let emailBodyBuilder = BodyBuilder()
-                    emailBodyBuilder.HtmlBody <- mailData.EmailHtmlBody
-                    emailBodyBuilder.TextBody <- mailData.EmailTextBody
+                emailMessage.Subject <- mailData.EmailSubject
+                let emailBodyBuilder = BodyBuilder()
+                emailBodyBuilder.HtmlBody <- mailData.EmailHtmlBody
+                emailBodyBuilder.TextBody <- mailData.EmailTextBody
 
-                    emailMessage.Body <- emailBodyBuilder.ToMessageBody()
+                emailMessage.Body <- emailBodyBuilder.ToMessageBody()
 
-                    use mailClient = new SmtpClient()
+                use mailClient = new SmtpClient()
 
-                    mailClient.Connect(
-                        mailSettings.Server,
-                        mailSettings.Port,
-                        MailKit.Security.SecureSocketOptions.StartTls
-                    )
+                mailClient.Connect(
+                    mailSettings.Server,
+                    mailSettings.Port,
+                    MailKit.Security.SecureSocketOptions.StartTls
+                )
 
-                    mailClient.Authenticate(mailSettings.UserName, mailSettings.Password)
-                    mailClient.Send(emailMessage) |> ignore
-                    mailClient.Disconnect(true)
-                with (ex: exn) ->
-                    logger.LogInformation $"error MailService.SendMail: {ex.Message}\n"
+                mailClient.Authenticate(mailSettings.UserName, mailSettings.Password)
+                mailClient.Send(emailMessage) |> ignore
+                mailClient.Disconnect(true)
+
 
 module RSSWorker =
 
@@ -381,29 +408,33 @@ module RSSWorker =
             : RSSEmailsAggregate list =
             DataAccess.aggreateRssEmails stoppingToken connectionString
 
-        member private __.GetLatestRemoteRSS(storedRSSes: RSSEmailsAggregate list) =
-            storedRSSes |> List.map _.Url |> List.toArray |> RSS.parseRSSHeads
+        member private __.GetLatestRemoteRSS(historyPairs: RSSHistoryPair array) =
+            async {
+                let! remoteRss = historyPairs |> Array.map _.Url |> RSS.parseRSSHeads
+
+                return
+                    remoteRss
+                    |> Seq.map (function
+                        | Choice1Of2(rss: RSS option) -> rss
+                        | Choice2Of2 _ -> None)
+                    |> Seq.choose id
+            }
 
         /// New RSS determined by latest title not same as stored in database.
         ///
         /// In-case the stored latest title is deleted from remote URL by the author,
         /// make sure the latest item published date from remote URL is not before
         /// the latest update stored in database.
-        member private __.FilterNewRemoteRSS (storedRSSes: RSSEmailsAggregate list) (remoteRSS: RSS) : bool =
-            storedRSSes
-            |> Seq.exists (fun (rssAggregate: RSSEmailsAggregate) ->
-                rssAggregate.LatestTitle <> remoteRSS.Title
-                && DateTime.Compare(remoteRSS.PublishDate, rssAggregate.LatestUpdated) >= 0)
+        member private __.FilterNewRemoteRSS (historyPairs: RSSHistoryPair array) (remoteRSS: RSS) : bool =
+            historyPairs
+            |> Seq.exists (fun (historyPair: RSSHistoryPair) ->
+                historyPair.LatestTitle <> remoteRSS.Title
+                && DateTime.Compare(remoteRSS.PublishDate, historyPair.LatestUpdated) >= 0)
 
         /// Get new RSS from remote URL and compare with RSS history in database
         /// to get detect new publised RSS from remote URL
-        member private this.FilterNewRSS (storedRSSes: RSSEmailsAggregate list) (remoteRSS) : RSS seq =
-            remoteRSS
-            |> Seq.map (function
-                | Choice1Of2 rss -> rss
-                | Choice2Of2 _ -> None)
-            |> Seq.choose id
-            |> Seq.filter (this.FilterNewRemoteRSS storedRSSes)
+        member private this.FilterNewRSS (historyPairs: RSSHistoryPair array) (remoteRSS: RSS seq) : RSS seq =
+            remoteRSS |> Seq.filter (this.FilterNewRemoteRSS historyPairs)
 
         member private __.StoreRemoteRSS
             (connectionString: string)
@@ -416,22 +447,17 @@ module RSSWorker =
                   RSSHistory.LatestTitle = remoteRSS.Title })
             |> DataAccess.renewRSSHistories stoppingToken connectionString
 
-        member private __.CreateEmailRecipients(rssAggregate: RSSEmailsAggregate list) : Mail.MailRecipient array =
-            (rssAggregate |> List.map (fun (r) -> r.Emails) |> String.concat ", ")
-                .Split(", ")
-            |> Array.map (
-                (fun (recipient: string) ->
-                    { Mail.MailRecipient.EmailToId = recipient
-                      Mail.MailRecipient.EmailToName =
-                        match recipient.Split "@" |> Array.tryHead with
-                        | None -> recipient
-                        | Some(username: string) -> username })
-            )
+        member private __.CreateEmailRecipient(recipient: string) : Mail.MailRecipient =
+            { Mail.MailRecipient.EmailToId = recipient
+              Mail.MailRecipient.EmailToName =
+                match recipient.Split "@" |> Array.tryHead with
+                | None -> recipient
+                | Some(username: string) -> username }
 
-        member private __.CreateEmailTextBody(newRSS: RSS seq) : string =
-            newRSS |> Seq.map (fun (rss: RSS) -> rss.Title) |> String.concat ", "
+        member private __.CreateEmailTextBody(newRSSes: RSS seq) : string =
+            newRSSes |> Seq.map (fun (rss: RSS) -> rss.Title) |> String.concat ", "
 
-        member private __.CreateEmailHtmlBody(newRSS: RSS seq) : string =
+        member private __.CreateEmailHtmlBody(newRSSes: RSS seq) : string =
             let templateFilePath =
                 Directory.GetCurrentDirectory() + "/Templates/email-notification.html"
 
@@ -443,38 +469,59 @@ module RSSWorker =
             let itemText = File.ReadAllText(itemFilePath)
 
             let emailBody =
-                newRSS
+                newRSSes
                 |> Seq.map (fun (rss: RSS) ->
                     String.Format(itemText, rss.Link, rss.Title, rss.OriginHostUrl, rss.OriginHost))
                 |> String.concat ""
 
             emailTemplateText.Replace("{0}", emailBody)
 
-        member private __.SendEmail (recipients: Mail.MailRecipient array) (htmlBody: string, textBody: string) =
+        member private __.SendEmail (recipient: Mail.MailRecipient) (htmlBody: string) (textBody: string) =
             let mailData =
                 { Mail.MailData.EmailTextBody = textBody
                   Mail.MailData.EmailHtmlBody = htmlBody
                   Mail.MailData.EmailSubject = "New RSS Release!"
-                  Mail.MailData.EmailRecipients = recipients }
+                  Mail.MailData.EmailRecipient = recipient }
 
             mailService.SendMail mailData
+
+        member private this.ProceedSubscriber(rssAggregate: RSSEmailsAggregate) =
+            async {
+                let rssHistoryPairs: RSSHistoryPair array =
+                    rssAggregate.HistoryPairs |> Array.choose id
+
+                let! (rssList: RSS seq) = this.GetLatestRemoteRSS rssHistoryPairs
+                let newRSS: RSS seq = this.FilterNewRSS rssHistoryPairs rssList
+
+                if (newRSS |> Seq.length) = 0 then
+                    return None
+                else
+                    this.SendEmail
+                        (this.CreateEmailRecipient rssAggregate.Email)
+                        (this.CreateEmailHtmlBody newRSS)
+                        (this.CreateEmailTextBody newRSS)
+
+                    return Some newRSS
+            }
 
         interface IRSSProcessingService with
 
             member this.DoWork(stoppingToken: CancellationToken) =
                 task {
                     try
-                        let rssAggregate = this.GetRSSAggregate connectionString stoppingToken
-                        let! rssList = this.GetLatestRemoteRSS rssAggregate
-                        let newRSS = this.FilterNewRSS rssAggregate rssList
+                        let! (newRSSes: RSS seq option array) =
+                            this.GetRSSAggregate connectionString stoppingToken
+                            |> List.map (this.ProceedSubscriber)
+                            |> Async.Parallel
 
-                        if (newRSS |> Seq.length) = 0 then
-                            ()
-                        else
-                            (this.CreateEmailHtmlBody newRSS, this.CreateEmailTextBody newRSS)
-                            |> (rssAggregate |> this.CreateEmailRecipients |> this.SendEmail)
-
-                            this.StoreRemoteRSS connectionString stoppingToken newRSS
+                        newRSSes
+                        |> Seq.choose id // Remove `None` value
+                        |> Seq.fold (fun (acc: RSS seq) (elem: RSS seq) -> Seq.concat [ acc; elem ]) [] // Flatten the RSSes
+                        |> Seq.map (fun (rss: RSS) -> (rss.Origin, rss)) // Transform to key-value pair to be able convert to Map
+                        |> Map.ofSeq // Convert to Map to remove duplicate item
+                        |> Map.toSeq // Convert back to `Seq`
+                        |> Seq.map (fun (_, rss: RSS) -> rss) // Get only the value
+                        |> (this.StoreRemoteRSS connectionString stoppingToken) // Save to DB
                     with (ex: exn) ->
                         logger.LogInformation $"error RSSProcessingService.DoWork: {ex.Message}"
                 }
@@ -501,6 +548,7 @@ module Worker =
                 while true do
                     logger.LogInformation "Background service run."
 
+                    // Process RSS subscription every within range 12 midnight once
                     if DateTime.Now.Hour = 0 && not isSend then
                         do! rssProcessingService.DoWork stoppingToken
                         isSend <- true
@@ -527,7 +575,7 @@ module Handler =
                 |> Seq.map (function
                     | Choice1Of2 rss -> rss
                     | Choice2Of2 _ -> Seq.empty)
-                |> Seq.fold (fun acc elem -> Seq.concat [ acc; elem ]) []
+                |> Seq.fold (fun (acc: RSS seq) (elem: RSS seq) -> Seq.concat [ acc; elem ]) []
                 |> Seq.sortByDescending _.PublishDate
         }
 
@@ -608,10 +656,18 @@ module Handler =
         }
 
     let subscribe (connectionString: string) (userId: string, email: string) : unit Async =
-        async { (DataAccess.setUserEmail connectionString userId email) |> ignore }
+        async {
+            (DataAccess.getRSSUrls connectionString userId)
+            |> List.map (fun (rssURL: string) ->
+                { RSSHistory.Url = rssURL
+                  RSSHistory.LatestTitle = "" })
+            |> DataAccess.insertRSSHistories connectionString
+
+            (DataAccess.setUserEmail connectionString userId email) |> ignore
+        }
 
     let unsubscribe (connectionString: string) (userId: string) : unit Async =
-        async { (DataAccess.setUserEmail connectionString userId "") |> ignore }
+        async { (DataAccess.unsetUserEmail connectionString userId) |> ignore }
 
     let rssIndexAction (ctx: HttpContext) =
         task {
