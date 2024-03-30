@@ -13,6 +13,7 @@ open Microsoft.Extensions.Options
 open MimeKit
 open MailKit.Net.Smtp
 open Saturn
+open Giraffe.Core
 open Fable.Remoting.Server
 open Fable.Remoting.Giraffe
 open Npgsql.FSharp
@@ -82,7 +83,7 @@ type MailSettings() =
     member val UserName: string = "" with get, set
     member val Password: string = "" with get, set
 
-let connectionString = Environment.GetEnvironmentVariable "DB_CONNECTION_STRING"
+let publicHost = Environment.GetEnvironmentVariable "PUBLIC_HOST"
 
 /// Ref: https://stackoverflow.com/a/1248/12976234
 /// And thanks to ChatGPT for convert the code for me :)
@@ -398,7 +399,8 @@ module RSSWorker =
     type IRSSProcessingService =
         abstract member DoWork: stoppingToken: CancellationToken -> Task
 
-    type RSSProcessingService(connectionString: string, mailService: Mail.IMailService, logger: ILogger<unit>) =
+    type RSSProcessingService
+        (connectionString: string, publicHost: string, mailService: Mail.IMailService, logger: ILogger<unit>) =
 
         member private __.GetRSSAggregate
             (connectionString: string)
@@ -455,7 +457,7 @@ module RSSWorker =
         member private __.CreateEmailTextBody(newRSSes: RSS seq) : string =
             newRSSes |> Seq.map (fun (rss: RSS) -> rss.Title) |> String.concat ", "
 
-        member private __.CreateEmailHtmlBody(newRSSes: RSS seq) : string =
+        member private __.CreateEmailHtmlBody (newRSSes: RSS seq) (recipientEmail: string) : string =
             let templateFilePath =
                 Directory.GetCurrentDirectory() + "/Templates/email-notification.html"
 
@@ -472,7 +474,10 @@ module RSSWorker =
                     String.Format(itemText, rss.Link, rss.Title, rss.OriginHostUrl, rss.OriginHost))
                 |> String.concat ""
 
-            emailTemplateText.Replace("{0}", emailBody)
+            emailTemplateText
+                .Replace("{0}", emailBody)
+                .Replace("{1}", publicHost)
+                .Replace("{2}", recipientEmail)
 
         member private __.SendEmail (recipient: Mail.MailRecipient) (htmlBody: string) (textBody: string) =
             let mailData =
@@ -496,7 +501,7 @@ module RSSWorker =
                 else
                     this.SendEmail
                         (this.CreateEmailRecipient rssAggregate.Email)
-                        (this.CreateEmailHtmlBody newRSS)
+                        (this.CreateEmailHtmlBody newRSS rssAggregate.Email)
                         (this.CreateEmailTextBody newRSS)
 
                     return Some newRSS
@@ -562,6 +567,25 @@ module Worker =
                 logger.LogInformation "Background service shutting down."
                 this.StopAsync stoppingToken |> Async.AwaitTask |> ignore
             }
+
+module Views =
+    open Giraffe.ViewEngine
+
+    let unsubsribePage =
+        html
+            []
+            [ head
+                  []
+                  [ title [] [ str "Unsubscribe Success" ]
+                    style
+                        []
+                        [ rawText
+                              "html { font-family: ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'}" ] ]
+              body
+                  [ _style
+                        "width: 100%;min-height: 100vh;display: flex;flex-direction: column;justify-content: center;align-items: center;gap: 5px" ]
+                  [ h1 [ _style "margin: 0; margin-bottom: 15px" ] [ str "Unsubscribe Success" ]
+                    p [ _style "margin: 0; margin-bottom: 15px" ] [ str "See you later!" ] ] ]
 
 module Handler =
     let getRSSList (urls: string array) =
@@ -673,6 +697,18 @@ module Handler =
             return! rssList |> Controller.json ctx
         }
 
+    let unsubsribeIndexAction (ctx: HttpContext) =
+        task {
+            return!
+                match ctx.Request.Query.Item("email").ToArray() |> Array.tryHead with
+                | None -> Controller.renderHtml ctx Views.unsubsribePage
+                | Some(email: string) ->
+                    task {
+                        do! unsubscribe ctx.RssDbConnectionString email
+                        return! Controller.renderHtml ctx Views.unsubsribePage
+                    }
+        }
+
 let rpcStore (ctx: HttpContext) =
     { IRPCStore.getRSSList = Handler.getRSSList
       IRPCStore.loginOrRegister = (Handler.loginOrRegister ctx.RssDbConnectionString)
@@ -689,13 +725,14 @@ let webApp =
 
 module Router =
     let rssController = controller { index Handler.rssIndexAction }
-
+    let unsubscribeController = controller { index Handler.unsubsribeIndexAction }
     let apiRouter = router { forward "/rss" rssController }
 
     let defaultView =
         router {
             forward "" webApp
             forward "/api" apiRouter
+            forward "/unsubscribe" unsubscribeController
         }
 
 let app =
@@ -715,7 +752,7 @@ let app =
             let mailService = Mail.MailService(mailSettings, logger)
 
             let rssProcessingService =
-                RSSWorker.RSSProcessingService(connectionString, mailService, logger)
+                RSSWorker.RSSProcessingService(connectionString, publicHost, mailService, logger)
 
             let minutesInMS = 1000 * 60
 

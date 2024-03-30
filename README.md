@@ -80,6 +80,7 @@ MailSettings__SenderName=<YOUR_NAME>
 MailSettings__SenderEmail=<YOUR@EMAIL>
 MailSettings__UserName=<YOUR MAIL SERVER USERNAME>
 MailSettings__Password=<YOUR MAIL SERVER PASWORD>
+PUBLIC_HOST=<YOUR PUBLIC HOST>
 PORT=<PUBLISHED PORT FOR THE SERVER APP INSIDE Docker> # Used for docker-compose
 ASPNETCORE_URLS_PORT=<SERVER APP PORT INSIDE Docker>
 ASPNETCORE_URLS=<SERVER APP HOST AND PORT INSIDE Docker>
@@ -110,6 +111,7 @@ docker run \
 -e MailSettings__SenderEmail=<YOUR@EMAIL> \
 -e MailSettings__UserName=<YOUR MAIL SERVER USERNAME> \
 -e MailSettings__Password=<YOUR MAIL SERVER PASWORD> \
+-e PUBLIC_HOST=<YOUR PUBLIC HOST> \
 -e ASPNETCORE_URLS="<SERVER APP HOST AND PORT INSIDE Docker>" \
 -p <PUBLISHD PORT>:<SERVER APP PORT INSIDE Docker> \
 rss-bookmarkr
