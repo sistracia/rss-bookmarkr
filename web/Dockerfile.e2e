@@ -40,5 +40,3 @@ COPY migrations/ ./migrations/
 
 COPY playwright.config.ts .
 COPY tests/ ./tests/
-
-# Trigger #4 GitHub Action
