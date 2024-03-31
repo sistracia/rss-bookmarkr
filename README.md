@@ -91,7 +91,7 @@ ASPNETCORE_URLS=<SERVER APP HOST AND PORT INSIDE Docker>
 See the [docker-compose.yaml here](./web/docker-compose.yaml).
 
 ```bash
-docker compose up
+PORT=<PUBLISHD PORT> ASPNETCORE_URLS_PORT=<SERVER APP PORT INSIDE Docker> docker compose up
 ```
 
 #### Using `docker build` and `docker run`

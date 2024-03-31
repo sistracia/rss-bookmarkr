@@ -8,11 +8,32 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+  web:
+    build: .
+    environment:
+      ConnectionStrings__RssDb: Userid=postgres;Password=mypassword;Host=db;Port=5432;Database=postgres;Pooling=true;MinPoolSize=0;MaxPoolSize=100;ConnectionLifetime=0;
+      MailSettings__Server: YOUR_MAIL_SERVER_HOST
+      MailSettings__Port: 587
+      MailSettings__SenderName: YOUR_NAME
+      MailSettings__SenderEmail: YOUR@EMAIL
+      MailSettings__UserName: YOUR_MAIL_SERVER_USERNAME
+      MailSettings__Password: YOUR_MAIL_SERVER_PASWORD
+      PUBLIC_HOST: YOUR_PUBLIC_HOST
+      ASPNETCORE_URLS: http://[::]:8080
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:8080 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      db:
+        condition: service_healthy
   e2e:
     image: ghcr.io/sistracia/rss-bookmarkr-e2e:main
     command: >
-      bash -c "dotnet migrondi up --dry-run false
-      && npx playwright test -x --reporter list"
+      bash -c "curl http://web:8080/
+      && dotnet migrondi up --dry-run false
+      && PAGE_URL=http://web:8080/ npx playwright test -x --reporter list"
     depends_on:
-      db:
+      web:
         condition: service_healthy

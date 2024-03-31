@@ -59,6 +59,7 @@ RUN bunx vite build ./src/Client
 # Build runtime image
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /App
+RUN apt update && apt install -y curl
 COPY --from=server-build /Server/publish .
 COPY --from=server-build /Server/src/Server/Templates Templates
 COPY --from=client-build /Client/src/Client/dist wwwroot
