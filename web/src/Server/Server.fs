@@ -377,12 +377,6 @@ module RSSWorker =
     type RSSProcessingService
         (connectionString: string, publicHost: string, mailService: Mail.IMailService, logger: ILogger<unit>) =
 
-        member private __.GetRSSAggregate
-            (connectionString: string)
-            (stoppingToken: CancellationToken)
-            : RSSEmailsAggregate list =
-            DataAccess.aggreateRssEmails stoppingToken connectionString
-
         member private __.GetLatestRemoteRSS(histories: RSSHistory array) =
             async {
                 return!
@@ -400,31 +394,37 @@ module RSSWorker =
         member private __.FilterNewRemoteRSS (history: RSSHistory) (remoteRSS: RSS) : bool =
             DateTime.Compare(remoteRSS.PublishDate, history.LatestUpdated) >= 0
 
+        member private this.MapRSSHistoryWithRemote (remoteRSSListMap: Map<string, RSS seq>) (history: RSSHistory) =
+            remoteRSSListMap.Item history.Url
+            |> Seq.filter (this.FilterNewRemoteRSS history)
+
         /// Get new RSS from remote URL and compare with RSS history in database
         /// to get detect new publised RSS from remote URL
         member private this.FilterNewRSS
             (histories: RSSHistory array)
             (remoteRSSList: (string * RSS seq) array)
-            : RSS seq =
+            : RSS seq array =
             // Create map used for value lookup
             let remoteRSSListMap: Map<string, RSS seq> = remoteRSSList |> Map.ofArray
+            histories |> Array.map (this.MapRSSHistoryWithRemote remoteRSSListMap)
 
-            histories
-            |> Array.map (fun (history: RSSHistory) ->
-                remoteRSSListMap.Item history.Url
-                |> Seq.filter (this.FilterNewRemoteRSS history))
+        member private __.FlattenNewRSS(recentRemoteRSSList: RSS seq array) : RSS seq =
+            recentRemoteRSSList
             |> Array.fold (fun (acc: RSS seq) (elem: RSS seq) -> Seq.concat [ acc; elem ]) [] // Flatten the RSS list
 
-        member private __.StoreRemoteRSS
-            (connectionString: string)
-            (stoppingToken: CancellationToken)
-            (remoteRSSList: RSS seq)
-            =
+        member private __.LatestNewRSS(rssListOfList: RSS seq array) : RSS array =
+            rssListOfList
+            |> Array.map (fun ((rssList: RSS seq)) -> rssList |> Seq.tryHead)
+            |> Array.choose (function
+                | Some(rss: RSS) -> Some(rss)
+                | _ -> None)
+            |> Array.map (fun (rss: RSS) -> rss)
+
+        member private __.CreateRSSHistories(remoteRSSList: RSS array) =
             remoteRSSList
-            |> Seq.map (fun (remoteRSS: RSS) ->
+            |> Array.map (fun (remoteRSS: RSS) ->
                 { RSSHistory.Url = remoteRSS.Origin
                   RSSHistory.LatestUpdated = DateTime.Now })
-            |> DataAccess.renewRSSHistories stoppingToken connectionString
 
         member private __.CreateEmailRecipient(recipient: string) : Mail.MailRecipient =
             { Mail.MailRecipient.EmailToId = recipient
@@ -467,22 +467,23 @@ module RSSWorker =
 
             mailService.SendMail mailData
 
-        member private this.ProceedSubscriber(rssAggregate: RSSEmailsAggregate) =
+        member private this.ProceedSubscriber(rssAggregate: RSSEmailsAggregate) : Async<RSS array option> =
             async {
                 let rssHistories: RSSHistory array = rssAggregate.HistoryPairs |> Array.choose id
 
                 let! (rssList: (string * RSS seq) array) = this.GetLatestRemoteRSS rssHistories
-                let newRSS: RSS seq = this.FilterNewRSS rssHistories rssList
+                let newRSS: RSS seq array = this.FilterNewRSS rssHistories rssList
+                let flatNewRSS: RSS seq = this.FlattenNewRSS newRSS
 
                 if (newRSS |> Seq.length) = 0 then
                     return None
                 else
                     this.SendEmail
                         (this.CreateEmailRecipient rssAggregate.Email)
-                        (this.CreateEmailHtmlBody newRSS rssAggregate.Email)
-                        (this.CreateEmailTextBody newRSS)
+                        (this.CreateEmailHtmlBody flatNewRSS rssAggregate.Email)
+                        (this.CreateEmailTextBody flatNewRSS)
 
-                    return Some newRSS
+                    return Some(this.LatestNewRSS newRSS)
             }
 
         interface IRSSProcessingService with
@@ -490,19 +491,20 @@ module RSSWorker =
             member this.DoWork(stoppingToken: CancellationToken) =
                 task {
                     try
-                        let! (newRSSList: RSS seq option array) =
-                            this.GetRSSAggregate connectionString stoppingToken
+                        let! (newRSSList: RSS array option array) =
+                            DataAccess.aggreateRssEmails stoppingToken connectionString
                             |> List.map (this.ProceedSubscriber)
                             |> Async.Parallel
 
                         newRSSList
-                        |> Seq.choose id // Remove `None` value
-                        |> Seq.fold (fun (acc: RSS seq) (elem: RSS seq) -> Seq.concat [ acc; elem ]) [] // Flatten the RSS list
-                        |> Seq.map (fun (rss: RSS) -> (rss.Origin, rss)) // Transform to key-value pair to be able convert to Map
-                        |> Map.ofSeq // Convert to Map to remove duplicate item
-                        |> Map.toSeq // Convert back to `Seq`
-                        |> Seq.map (fun (_, rss: RSS) -> rss) // Get only the value
-                        |> (this.StoreRemoteRSS connectionString stoppingToken) // Save to DB
+                        |> Array.choose id // Remove `option` from `RSS array option array`
+                        |> Array.fold (fun (acc: RSS array) (elem: RSS array) -> Array.concat [ acc; elem ]) [||] // Flatten the RSS list
+                        |> Array.map (fun (rss: RSS) -> (rss.Origin, rss)) // Transform to key-value pair to be able convert to Map
+                        |> Map.ofArray // Convert to Map to remove duplicate item
+                        |> Map.toArray // Convert back to list
+                        |> Array.map (fun (_, rss: RSS) -> rss) // Get only the value
+                        |> (this.CreateRSSHistories) // Map `RSS` to `RSSHistory`
+                        |> DataAccess.renewRSSHistories stoppingToken connectionString // Save to DB
                     with (ex: exn) ->
                         logger.LogInformation $"error RSSProcessingService.DoWork: {ex.Message}"
                 }

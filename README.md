@@ -36,6 +36,12 @@ Just because most (maybe all) F# app found out there use it, but it's such a coo
 
 ### Start Development
 
+Create `.env` file, [see example](./web/.env.example).
+
+```bash
+cp .env.example .env # change the value inside later
+```
+
 See the script in [package.json here](./web/package.json) and in [Makefile here](./web/Makefile)
 
 ```bash
