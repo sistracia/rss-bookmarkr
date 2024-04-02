@@ -63,16 +63,12 @@ type RSSUrl =
       Url: string
       UserId: string }
 
-type RSSHistory = { Url: string; LatestTitle: string }
-
-type RSSHistoryPair =
-    { Url: string
-      LatestTitle: string
-      LatestUpdated: DateTime }
+type RSSHistory =
+    { Url: string; LatestUpdated: DateTime }
 
 type RSSEmailsAggregate =
     { Email: string
-      HistoryPairs: RSSHistoryPair option array }
+      HistoryPairs: RSSHistory option array }
 
 type MailSettings() =
     static member SettingName = "MailSettings"
@@ -257,7 +253,7 @@ module DataAccess =
         |> Sql.query
             """SELECT
                         u.email,
-                        ARRAY_AGG(ru.url || '|' || rh.latest_title || '|' || rh.latest_updated) AS history_pairs
+                        ARRAY_AGG(ru.url || '|' || rh.latest_updated) AS history_pairs
                     FROM
                         users u
                     JOIN
@@ -272,11 +268,10 @@ module DataAccess =
                 (read.stringArray "history_pairs")
                 |> Array.map (fun (pair: string) ->
                     match pair.Split("|") with
-                    | [| url: string; latestTitle: string; latestUpdated: string |] ->
+                    | [| url: string; latestUpdated: string |] ->
                         Some
-                            { RSSHistoryPair.Url = url
-                              RSSHistoryPair.LatestTitle = latestTitle
-                              RSSHistoryPair.LatestUpdated = DateTime.Parse latestUpdated }
+                            { RSSHistory.Url = url
+                              RSSHistory.LatestUpdated = DateTime.Parse latestUpdated }
                     | _ -> None) })
 
     let unsetUserEmail (connectionString: string) (email: string) =
@@ -292,16 +287,15 @@ module DataAccess =
         |> Sql.connect
         |> Sql.executeTransaction
             [ "UPDATE users SET email = @email WHERE id = @id", [ [ "@id", Sql.text userId; "@email", Sql.text email ] ]
-              """INSERT INTO rss_histories (id, url, latest_title, latest_updated) 
-                            VALUES (@id, @url, @latest_title, @latest_updated)
+              """INSERT INTO rss_histories (id, url, latest_updated) 
+                            VALUES (@id, @url, @latest_updated)
                             ON CONFLICT (url) DO NOTHING""",
               [ yield!
                     newRSSHistories
                     |> Seq.map (fun (rss: RSSHistory) ->
                         [ "@id", Sql.text (Guid.NewGuid().ToString())
                           "@url", Sql.text rss.Url
-                          "@latest_title", Sql.text rss.LatestTitle
-                          "@latest_updated", Sql.date DateTime.Now ]) ] ]
+                          "@latest_updated", Sql.date rss.LatestUpdated ]) ] ]
         |> ignore
 
     // Upsert the RSS histories
@@ -314,18 +308,17 @@ module DataAccess =
         |> Sql.connect
         |> Sql.cancellationToken cancellationToken
         |> Sql.executeTransaction
-            [ """INSERT INTO rss_histories (id, url, latest_title, latest_updated) 
-                            VALUES (@id, @url, @latest_title, @latest_updated)
+            [ """INSERT INTO rss_histories (id, url, latest_updated) 
+                            VALUES (@id, @url, @latest_updated)
                             ON CONFLICT (url)
                                 DO UPDATE 
-                                    SET latest_title=EXCLUDED.latest_title, latest_updated=EXCLUDED.latest_updated""",
+                                    SET latest_updated=EXCLUDED.latest_updated""",
               [ yield!
                     newRSSHistories
                     |> Seq.map (fun (rss: RSSHistory) ->
                         [ "@id", Sql.text (Guid.NewGuid().ToString())
                           "@url", Sql.text rss.Url
-                          "@latest_title", Sql.text rss.LatestTitle
-                          "@latest_updated", Sql.date DateTime.Now ]) ] ]
+                          "@latest_updated", Sql.date rss.LatestUpdated ]) ] ]
         |> ignore
 
 /// Ref: https://mailtrap.io/blog/asp-net-core-send-email/
@@ -390,41 +383,36 @@ module RSSWorker =
             : RSSEmailsAggregate list =
             DataAccess.aggreateRssEmails stoppingToken connectionString
 
-        member private __.GetLatestRemoteRSS(historyPairs: RSSHistoryPair array) =
+        member private __.GetLatestRemoteRSS(histories: RSSHistory array) =
             async {
                 return!
-                    historyPairs
-                    |> Array.map (fun (historyPair: RSSHistoryPair) ->
+                    histories
+                    |> Array.map (fun (history: RSSHistory) ->
                         // Transform to async function that return tuple of url and RSS list
                         async {
-                            let! (remoteRSSList: RSS seq) = RSS.parseRSS historyPair.Url
-                            return (historyPair.Url, remoteRSSList)
+                            let! (remoteRSSList: RSS seq) = RSS.parseRSS history.Url
+                            return (history.Url, remoteRSSList)
                         })
                     |> Async.Parallel
             }
 
-        /// New RSS determined by latest title not same as stored in database.
-        ///
-        /// In-case the stored latest title is deleted from remote URL by the author,
-        /// make sure the latest item published date from remote URL is not before
-        /// the latest update stored in database.
-        member private __.FilterNewRemoteRSS (historyPair: RSSHistoryPair) (remoteRSS: RSS) : bool =
-            historyPair.LatestTitle <> remoteRSS.Title
-            && DateTime.Compare(remoteRSS.PublishDate, historyPair.LatestUpdated) >= 0
+        /// New RSS determined by latest updated is higher compare to the stored one in database.
+        member private __.FilterNewRemoteRSS (history: RSSHistory) (remoteRSS: RSS) : bool =
+            DateTime.Compare(remoteRSS.PublishDate, history.LatestUpdated) >= 0
 
         /// Get new RSS from remote URL and compare with RSS history in database
         /// to get detect new publised RSS from remote URL
         member private this.FilterNewRSS
-            (historyPairs: RSSHistoryPair array)
+            (histories: RSSHistory array)
             (remoteRSSList: (string * RSS seq) array)
             : RSS seq =
             // Create map used for value lookup
             let remoteRSSListMap: Map<string, RSS seq> = remoteRSSList |> Map.ofArray
 
-            historyPairs
-            |> Array.map (fun (historyPair: RSSHistoryPair) ->
-                remoteRSSListMap.Item historyPair.Url
-                |> Seq.filter (this.FilterNewRemoteRSS historyPair))
+            histories
+            |> Array.map (fun (history: RSSHistory) ->
+                remoteRSSListMap.Item history.Url
+                |> Seq.filter (this.FilterNewRemoteRSS history))
             |> Array.fold (fun (acc: RSS seq) (elem: RSS seq) -> Seq.concat [ acc; elem ]) [] // Flatten the RSS list
 
         member private __.StoreRemoteRSS
@@ -435,7 +423,7 @@ module RSSWorker =
             remoteRSSList
             |> Seq.map (fun (remoteRSS: RSS) ->
                 { RSSHistory.Url = remoteRSS.Origin
-                  RSSHistory.LatestTitle = remoteRSS.Title })
+                  RSSHistory.LatestUpdated = DateTime.Now })
             |> DataAccess.renewRSSHistories stoppingToken connectionString
 
         member private __.CreateEmailRecipient(recipient: string) : Mail.MailRecipient =
@@ -481,11 +469,10 @@ module RSSWorker =
 
         member private this.ProceedSubscriber(rssAggregate: RSSEmailsAggregate) =
             async {
-                let rssHistoryPairs: RSSHistoryPair array =
-                    rssAggregate.HistoryPairs |> Array.choose id
+                let rssHistories: RSSHistory array = rssAggregate.HistoryPairs |> Array.choose id
 
-                let! (rssList: (string * RSS seq) array) = this.GetLatestRemoteRSS rssHistoryPairs
-                let newRSS: RSS seq = this.FilterNewRSS rssHistoryPairs rssList
+                let! (rssList: (string * RSS seq) array) = this.GetLatestRemoteRSS rssHistories
+                let newRSS: RSS seq = this.FilterNewRSS rssHistories rssList
 
                 if (newRSS |> Seq.length) = 0 then
                     return None
@@ -670,7 +657,7 @@ module Handler =
             (DataAccess.getRSSUrls connectionString userId)
             |> List.map (fun (rssURL: string) ->
                 { RSSHistory.Url = rssURL
-                  RSSHistory.LatestTitle = "" })
+                  RSSHistory.LatestUpdated = DateTime.Now })
             |> (DataAccess.setUserEmail connectionString (userId, email))
             |> ignore
         }
