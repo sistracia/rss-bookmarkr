@@ -9,13 +9,13 @@ Bookmark your favorite RSS feeds.
 - [Bun](https://github.com/oven-sh/bun) 1.0
 - [.NET](https://dotnet.microsoft.com/en-us/download) 8.0
 
-### Why need Bun?
+#### Why need Bun?
 
 Because the Client app use [Feliz](https://github.com/Zaid-Ajaj/Feliz) and it's resulting code that depends to React in the end, also the Client app use [Daisy UI](https://daisyui.com/) ( [Feliz.DaisyUI](https://dzoukr.github.io/Feliz.DaisyUI/#/) ) and it's depends to [Tailwind](https://tailwindcss.com/), and some other tooling that need to be installed from NPM like [Elmish.Debbuger](https://github.com/elmish/debugger) depends to [remotedev](https://github.com/zalmoxisus/remotedev). The reason to choose [Bun](https://github.com/oven-sh/bun) instead of `npm` or other package manage ([Node.js](https://nodejs.org/en)) is because [Bun](https://github.com/oven-sh/bun) is such a cool project.
 
-### Why need .NET?
+#### Why need .NET?
 
-It's obvious, tooling and to run F# need it.
+It's tool that needed to run and compile F#.
 
 ### Install dependencies
 

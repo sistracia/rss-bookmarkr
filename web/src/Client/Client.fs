@@ -1,4 +1,4 @@
-﻿module App
+module App
 
 open System
 open Feliz
@@ -133,26 +133,53 @@ module RSS =
             let url = state.Url
             let isUrlExists = state.Urls |> Array.exists (fun elm -> elm = url)
 
-            let nextState, nextCmd =
-                if url <> "" && not isUrlExists then
-                    state,
-                    Array.append state.Urls [| url |]
-                    |> Search.generateUrlSearch
-                    |> Navigation.newUrl
-                else
-                    { state with Url = "" }, Cmd.none
+            if url <> "" && not isUrlExists then
+                let newUrls = [| url |]
+                let newUrlsState = Array.append state.Urls newUrls
+
+                let nextState =
+                    { state with
+                        Url = ""
+                        Urls = newUrlsState }
+
+                let nextCmd =
+                    Cmd.batch
+                        [ newUrlsState |> Search.generateUrlSearch |> Navigation.newUrl
+                          newUrls |> GetRSSList |> Cmd.ofMsg ]
+
+                nextState, nextCmd
+            else
+                let nextState = { state with Url = "" }
+                nextState, Cmd.none
+        | SetUrls(urls: string array) ->
+            let nextState =
+                { state with
+                    Url = ""
+                    Urls = urls
+                    RSSList = Seq.empty }
+
+            let nextCmd =
+                match urls with
+                | [||] -> Cmd.none
+                | _ ->
+                    Cmd.batch
+                        [ urls |> Search.generateUrlSearch |> Navigation.newUrl
+                          urls |> GetRSSList |> Cmd.ofMsg ]
 
             nextState, nextCmd
-        | SetUrls(urls: string array) ->
-            let nextState = { state with Url = ""; Urls = urls }
-
-            nextState, urls |> GetRSSList |> Cmd.ofMsg
         | RemoveUrl(url: string) ->
-            state,
-            state.Urls
-            |> Array.filter (fun elm -> elm <> url)
-            |> Search.generateUrlSearch
-            |> Navigation.newUrl
+            let newUrls = state.Urls |> Array.filter (fun elm -> elm <> url)
+
+            let newRSSList =
+                state.RSSList
+                |> Seq.filter (fun (rss: RSS) -> newUrls |> Array.exists (fun (newUrl: string) -> newUrl = rss.Origin))
+
+            let nextState =
+                { state with
+                    Urls = newUrls
+                    RSSList = newRSSList }
+
+            nextState, newUrls |> Search.generateUrlSearch |> Navigation.newUrl
         | SaveUrls ->
             state,
             match user with
@@ -161,22 +188,14 @@ module RSS =
                 Cmd.OfAsync.attempt RPC.saveRSSUrlssss (user.UserId, state.Urls) ofError
             | None -> Cmd.none
         | GetRSSList(urls: string array) ->
-            match urls with
-            | [||] ->
-                let nextState =
-                    { state with
-                        ServerState = Idle
-                        RSSList = Seq.empty }
-
-                (nextState, Cmd.none)
-            | _ ->
-                let nextState = { state with ServerState = Loading }
-                let ofError = fun (ex: exn) -> Some ex.Message |> SetError
-                nextState, Cmd.OfAsync.either RPC.getRSSList urls GotRSSList ofError
+            let nextState = { state with ServerState = Loading }
+            let ofError = fun (ex: exn) -> Some ex.Message |> SetError
+            let nextCmd = Cmd.OfAsync.either RPC.getRSSList urls GotRSSList ofError
+            nextState, nextCmd
         | GotRSSList(rssList: RSS seq) ->
             { state with
                 ServerState = Idle
-                RSSList = rssList },
+                RSSList = [ rssList; state.RSSList ] |> Seq.concat |> Seq.sortByDescending _.PublishDate },
             Cmd.none
         | ChangeEmail(email: string) ->
             let nextState = { state with Email = email }
@@ -474,9 +493,14 @@ type Msg =
 
 type BrowserRoute = Search of string option
 
+let initUrlCmd (urls: string array) =
+    urls |> RSS.Msg.SetUrls |> RSSMsg |> Cmd.ofMsg
+
 let route = oneOf [ map Search (top <?> stringParam "url") ]
 
-let urlUpdate (route: BrowserRoute option) (state: State) =
+let urlUpdate (_: BrowserRoute option) (state: State) = state, Cmd.none
+
+let urlInit (route: BrowserRoute option) (state: State) =
     state,
     match route with
     | Some(Search(query: string option)) ->
@@ -484,9 +508,8 @@ let urlUpdate (route: BrowserRoute option) (state: State) =
         | Some query -> query.Split [| ',' |] |> Array.distinct
         | None -> [||]
     | None -> [||]
-    |> RSS.Msg.SetUrls
-    |> RSSMsg
-    |> Cmd.ofMsg
+    |> initUrlCmd
+
 
 let init (route: BrowserRoute option) =
     let rssState, rssCmd = RSS.init ()
@@ -497,7 +520,7 @@ let init (route: BrowserRoute option) =
           RSS = rssState
           Auth = authState }
 
-    let _initialState, initalCmd = urlUpdate route initialState
+    let _initialState, initalCmd = urlInit route initialState
 
     let _initialCmd =
         Cmd.batch [ Cmd.map RSSMsg rssCmd; Cmd.map AuthMsg authCmd; initalCmd ]
@@ -541,7 +564,7 @@ let update (msg: Msg) (state: State) : State * Cmd<Msg> =
                         Auth = authState
                         State.User = Some user }
 
-                let nextCmd = loginResult.RssUrls |> Search.generateUrlSearch |> Navigation.newUrl
+                let nextCmd = loginResult.RssUrls |> initUrlCmd
 
                 nextState, nextCmd
             | None -> state, Cmd.none
