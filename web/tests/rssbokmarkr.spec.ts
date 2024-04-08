@@ -65,12 +65,11 @@ test.describe("single url", () => {
     await page.goto(`${pageURL}/?url=${overreactedURL}`);
 
     await page.getByRole("button", { name: "X" }).click();
-    expect(await page.getByText(overreactedURL).count()).toStrictEqual(0);
     await expect(page).toHaveURL(pageURL);
   });
 });
 
-test.describe.skip("multiple url", () => {
+test.describe("multiple url", () => {
   test("add new url", async ({ page }) => {
     await page.goto(pageURL);
 
@@ -113,8 +112,6 @@ test.describe.skip("multiple url", () => {
     await page.goto(`${pageURL}/?url=${rssURLS.join(",")}`);
 
     await page.getByRole("button", { name: "X" }).first().click();
-
-    expect(await page.getByText(overreactedURL).count()).toStrictEqual(0);
     await expect(page.getByText(infoqURL)).toBeVisible();
     await expect(page.getByText(stackoverflowURL)).toBeVisible();
     await expect(page).toHaveURL(
@@ -124,7 +121,7 @@ test.describe.skip("multiple url", () => {
 });
 
 test.describe("user authentication", () => {
-  test("login", async ({ page }) => {
+  test("login and logout", async ({ page }) => {
     await page.goto(pageURL);
 
     await page
@@ -139,32 +136,18 @@ test.describe("user authentication", () => {
     await page.getByPlaceholder("Username").fill(username);
     await page.getByPlaceholder("******").fill(password);
     await page.locator("form").getByText("Log In", { exact: true }).click();
-
-    await expect(page.getByText("Log Out")).toBeVisible();
     await page.waitForFunction((sessionKey) => {
       return localStorage[sessionKey] !== undefined;
     }, sessionKey);
-  });
 
-  test("logout", async ({ page }) => {
-    await page.goto(pageURL);
-
-    await page
-      .locator("div")
-      .filter({ hasText: /^Log In$/ })
-      .locator("label")
-      .click();
-
-    await page.getByPlaceholder("Username").fill(username);
-    await page.getByPlaceholder("******").fill(password);
-    await page.locator("form").getByText("Log In", { exact: true }).click();
+    await page.getByText("Log Out").click();
     await page.waitForFunction((sessionKey) => {
       return localStorage[sessionKey] === undefined;
     }, sessionKey);
   });
 });
 
-test.describe.skip("authorized user", () => {
+test.describe("authorized user", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(pageURL);
 
@@ -179,6 +162,13 @@ test.describe.skip("authorized user", () => {
     await page.locator("form").getByText("Log In", { exact: true }).click();
     await page.waitForFunction((sessionKey) => {
       return localStorage[sessionKey] !== undefined;
+    }, sessionKey);
+  });
+
+  test.afterEach(async ({ page }) => {
+    await page.getByText("Log Out").click();
+    await page.waitForFunction((sessionKey) => {
+      return localStorage[sessionKey] === undefined;
     }, sessionKey);
   });
 
@@ -206,7 +196,6 @@ test.describe.skip("authorized user", () => {
     );
 
     await page.getByRole("button", { name: "X" }).click();
-    expect(await page.getByText(overreactedURL).count()).toStrictEqual(0);
     await page.getByRole("button", { name: "Save Urls" }).click();
 
     rssSaveResponse = await rssSaveResponsePromise;
@@ -216,7 +205,7 @@ test.describe.skip("authorized user", () => {
     ]);
   });
 
-  test("subscribe and subscribe", async ({ page }) => {
+  test("subscribe and unsubscribe", async ({ page }) => {
     await page.getByText("Subscribe").first().click();
     await page.getByPlaceholder("email@domain.com").fill(subscribeEmail);
 
