@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 const pageURL = process.env.PAGE_URL || "http://localhost:8080";
 
@@ -14,6 +14,168 @@ const rssURLS = [
 ];
 const [overreactedURL, infoqURL, stackoverflowURL] = rssURLS;
 
+async function assertRSSList(option: {
+  page: Page;
+  trigger: () => Promise<void>;
+  expectedPostData: unknown;
+}) {
+  return await assertAPICallUnsubscribe({
+    ...option,
+    url: "**/rpc/IRPCStore/getRSSList",
+  });
+}
+
+async function assertSaveRSSUrls(option: {
+  page: Page;
+  trigger: () => Promise<void>;
+  expectedPostData: unknown;
+}) {
+  return await assertAPICallUnsubscribe({
+    ...option,
+    url: "**/rpc/IRPCStore/saveRSSUrls",
+  });
+}
+
+async function assertSubscribe(option: {
+  page: Page;
+  trigger: () => Promise<void>;
+  expectedPostData: unknown;
+}) {
+  return await assertAPICallUnsubscribe({
+    ...option,
+    url: "**/rpc/IRPCStore/subscribe",
+  });
+}
+
+async function assertUnsubscribe(option: {
+  page: Page;
+  trigger: () => Promise<void>;
+  expectedPostData: unknown;
+}) {
+  return await assertAPICallUnsubscribe({
+    ...option,
+    url: "**/rpc/IRPCStore/unsubscribe",
+  });
+}
+
+async function assertLoginOrRegister(option: {
+  page: Page;
+  trigger: () => Promise<void>;
+  expectedPostData: unknown;
+}) {
+  return await assertAPICallUnsubscribe({
+    ...option,
+    url: "**/rpc/IRPCStore/loginOrRegister",
+  });
+}
+
+async function assertAPICallUnsubscribe(option: {
+  url: string;
+  page: Page;
+  trigger: () => Promise<void>;
+  expectedPostData: unknown;
+}) {
+  const { url, page, trigger, expectedPostData } = option;
+
+  const responsePromise = page.waitForResponse(url);
+
+  await trigger();
+
+  const response = await responsePromise;
+  expect(response.ok()).toStrictEqual(true);
+  expect(response.request().postDataJSON()).toStrictEqual(expectedPostData);
+
+  return response.json();
+}
+
+function getURLInput(page: Page) {
+  return page.getByPlaceholder("https://overreacted.io/rss.xml");
+}
+
+function getAddURLButton(page: Page) {
+  return page.getByRole("button", { name: "Add" });
+}
+
+function getDeleteURLButton(page: Page) {
+  return page.getByRole("button", { name: "X" });
+}
+
+function getLoginFormTitle(page: Page) {
+  return page.getByRole("heading", { name: "Log In Form" });
+}
+
+function getLoginUsernameField(page: Page) {
+  return page.getByPlaceholder("Username");
+}
+
+function getLoginPasswordField(page: Page) {
+  return page.getByPlaceholder("******");
+}
+
+function getSaveURLsButton(page: Page) {
+  return page.getByRole("button", { name: "Save Urls" });
+}
+
+function getLogoutButton(page: Page) {
+  return page.getByText("Log Out");
+}
+
+function getSubscribeModalButton(page: Page) {
+  return page.getByText("Subscribe").first();
+}
+
+function getSubscribeFormButton(page: Page) {
+  return page.getByText("Subscribe").nth(2);
+}
+
+function getSubscribeEmailField(page: Page) {
+  return page.getByPlaceholder("email@domain.com");
+}
+
+function getUnsubscribeButton(page: Page) {
+  return page.getByRole("button", { name: "Unsubscribe" });
+}
+
+function getLoginModalButton(page: Page) {
+  return page
+    .locator("div")
+    .filter({ hasText: /^Log In$/ })
+    .locator("label");
+}
+
+function getLoginFormButton(page: Page) {
+  return page.locator("form").getByText("Log In", { exact: true });
+}
+
+async function waitLoadingPage(page: Page) {
+  await page.locator(".skeleton").first().waitFor({ state: "visible" });
+  await page.locator(".skeleton").first().waitFor({ state: "detached" });
+}
+
+async function assertLocalStorageExist(page: Page, key: string) {
+  await page.waitForFunction((key) => {
+    return localStorage[key] !== undefined;
+  }, key);
+}
+
+async function assertLocalStorageNotExist(page: Page, key: string) {
+  await page.waitForFunction((key) => {
+    return localStorage[key] === undefined;
+  }, key);
+}
+
+async function login(page: Page, username: string, password: string) {
+  const loginResponse = await assertLoginOrRegister({
+    page,
+    expectedPostData: [{ Username: username, Password: password }],
+    trigger: async () => {
+      await getLoginFormButton(page).click();
+    },
+  });
+
+  return loginResponse["Success"];
+}
+
 test("has title", async ({ page }) => {
   await page.goto(pageURL);
   await expect(page).toHaveTitle("RSS Bookmarkr");
@@ -23,19 +185,16 @@ test.describe("single url", () => {
   test("add new url", async ({ page }) => {
     await page.goto(pageURL);
 
-    const urlInput = page.getByPlaceholder("https://overreacted.io/rss.xml");
+    const urlInput = getURLInput(page);
     await urlInput.fill(overreactedURL);
 
-    const rssListResponsePromise = page.waitForResponse(
-      "**/rpc/IRPCStore/getRSSList"
-    );
-    await page.getByRole("button", { name: "Add" }).click();
-
-    const rssListResponse = await rssListResponsePromise;
-    expect(rssListResponse.ok()).toStrictEqual(true);
-    expect(rssListResponse.request().postDataJSON()).toStrictEqual([
-      [overreactedURL],
-    ]);
+    await assertRSSList({
+      page,
+      expectedPostData: [[overreactedURL]],
+      trigger: async () => {
+        await getAddURLButton(page).click();
+      },
+    });
 
     await expect(urlInput).toHaveValue("");
     await expect(page.getByText(overreactedURL)).toBeVisible();
@@ -43,18 +202,15 @@ test.describe("single url", () => {
   });
 
   test("init url with query param", async ({ page }) => {
-    const rssListResponsePromise = page.waitForResponse(
-      "**/rpc/IRPCStore/getRSSList"
-    );
-    await page.goto(`${pageURL}/?url=${overreactedURL}`);
+    await assertRSSList({
+      page,
+      expectedPostData: [[overreactedURL]],
+      trigger: async () => {
+        await page.goto(`${pageURL}/?url=${overreactedURL}`);
+      },
+    });
 
-    const rssListResponse = await rssListResponsePromise;
-    expect(rssListResponse.ok()).toStrictEqual(true);
-    expect(rssListResponse.request().postDataJSON()).toStrictEqual([
-      [overreactedURL],
-    ]);
-
-    const urlInput = page.getByPlaceholder("https://overreacted.io/rss.xml");
+    const urlInput = getURLInput(page);
 
     await expect(urlInput).toHaveValue("");
     await expect(page.getByText(overreactedURL)).toBeVisible();
@@ -64,7 +220,7 @@ test.describe("single url", () => {
   test("delete url", async ({ page }) => {
     await page.goto(`${pageURL}/?url=${overreactedURL}`);
 
-    await page.getByRole("button", { name: "X" }).click();
+    await getDeleteURLButton(page).click();
     await expect(page).toHaveURL(pageURL);
   });
 });
@@ -73,22 +229,19 @@ test.describe("multiple url", () => {
   test("add new url", async ({ page }) => {
     await page.goto(pageURL);
 
-    const urlInput = page.getByPlaceholder("https://overreacted.io/rss.xml");
-    const addButton = page.getByRole("button", { name: "Add" });
+    const urlInput = getURLInput(page);
+    const addButton = getAddURLButton(page);
 
     for (const rssURL of rssURLS) {
       await urlInput.fill(rssURL);
 
-      const rssListResponsePromise = page.waitForResponse(
-        "**/rpc/IRPCStore/getRSSList"
-      );
-      await addButton.click();
-
-      const rssListResponse = await rssListResponsePromise;
-      expect(rssListResponse.ok()).toStrictEqual(true);
-      expect(rssListResponse.request().postDataJSON()).toStrictEqual([
-        [rssURL],
-      ]);
+      await assertRSSList({
+        page,
+        expectedPostData: [[rssURL]],
+        trigger: async () => {
+          await addButton.click();
+        },
+      });
 
       await expect(page.getByText(rssURL)).toBeVisible();
     }
@@ -99,8 +252,7 @@ test.describe("multiple url", () => {
   test("init url with query param", async ({ page }) => {
     await page.goto(`${pageURL}/?url=${rssURLS.join(",")}`);
 
-    await page.locator(".skeleton").first().waitFor({ state: "visible" });
-    await page.locator(".skeleton").first().waitFor({ state: "detached" });
+    await waitLoadingPage(page);
     for (const rssURL of rssURLS) {
       await expect(page.getByText(rssURL)).toBeVisible();
     }
@@ -111,7 +263,7 @@ test.describe("multiple url", () => {
   test("delete url", async ({ page }) => {
     await page.goto(`${pageURL}/?url=${rssURLS.join(",")}`);
 
-    await page.getByRole("button", { name: "X" }).first().click();
+    await getDeleteURLButton(page).first().click();
     await expect(page.getByText(infoqURL)).toBeVisible();
     await expect(page.getByText(stackoverflowURL)).toBeVisible();
     await expect(page).toHaveURL(
@@ -124,26 +276,16 @@ test.describe("user authentication", () => {
   test("login and logout", async ({ page }) => {
     await page.goto(pageURL);
 
-    await page
-      .locator("div")
-      .filter({ hasText: /^Log In$/ })
-      .locator("label")
-      .click();
-    await expect(
-      page.getByRole("heading", { name: "Log In Form" })
-    ).toBeVisible();
+    await getLoginModalButton(page).click();
+    await expect(getLoginFormTitle(page)).toBeVisible();
 
-    await page.getByPlaceholder("Username").fill(username);
-    await page.getByPlaceholder("******").fill(password);
-    await page.locator("form").getByText("Log In", { exact: true }).click();
-    await page.waitForFunction((sessionKey) => {
-      return localStorage[sessionKey] !== undefined;
-    }, sessionKey);
+    await getLoginUsernameField(page).fill(username);
+    await getLoginPasswordField(page).fill(password);
+    await login(page, username, password);
+    await assertLocalStorageExist(page, sessionKey);
 
-    await page.getByText("Log Out").click();
-    await page.waitForFunction((sessionKey) => {
-      return localStorage[sessionKey] === undefined;
-    }, sessionKey);
+    await getLogoutButton(page).click();
+    await assertLocalStorageNotExist(page, sessionKey);
   });
 });
 
@@ -151,84 +293,65 @@ test.describe("authorized user", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(pageURL);
 
-    await page
-      .locator("div")
-      .filter({ hasText: /^Log In$/ })
-      .locator("label")
-      .click();
+    await getLoginModalButton(page).click();
 
-    await page.getByPlaceholder("Username").fill(username);
-    await page.getByPlaceholder("******").fill(password);
-    await page.locator("form").getByText("Log In", { exact: true }).click();
-    await page.waitForFunction((sessionKey) => {
-      return localStorage[sessionKey] !== undefined;
-    }, sessionKey);
+    await getLoginUsernameField(page).fill(username);
+    await getLoginPasswordField(page).fill(password);
   });
 
   test.afterEach(async ({ page }) => {
-    await page.getByText("Log Out").click();
-    await page.waitForFunction((sessionKey) => {
-      return localStorage[sessionKey] === undefined;
-    }, sessionKey);
+    await getLogoutButton(page).click();
+    await assertLocalStorageNotExist(page, sessionKey);
   });
 
   test("save urls and delete the url", async ({ page }) => {
-    await page
-      .getByPlaceholder("https://overreacted.io/rss.xml")
-      .fill(overreactedURL);
-    await page.getByRole("button", { name: "Add" }).click();
-    await page.locator(".skeleton").first().waitFor({ state: "visible" });
-    await page.locator(".skeleton").first().waitFor({ state: "detached" });
+    const { UserId: userId } = await login(page, username, password);
 
-    let rssSaveResponsePromise = page.waitForResponse(
-      "**/rpc/IRPCStore/saveRSSUrls"
-    );
-    await page.getByRole("button", { name: "Save Urls" }).click();
+    await getURLInput(page).fill(overreactedURL);
+    await getAddURLButton(page).click();
+    await waitLoadingPage(page);
 
-    let rssSaveResponse = await rssSaveResponsePromise;
-    expect(rssSaveResponse.ok()).toStrictEqual(true);
-    expect(rssSaveResponse.request().postDataJSON()).toStrictEqual([
-      [expect.stringContaining("-"), [overreactedURL]],
-    ]);
+    const saveUrlsButton = getSaveURLsButton(page);
 
-    rssSaveResponsePromise = page.waitForResponse(
-      "**/rpc/IRPCStore/saveRSSUrls"
-    );
+    await assertSaveRSSUrls({
+      page,
+      expectedPostData: [[userId, [overreactedURL]]],
+      trigger: async () => {
+        await saveUrlsButton.click();
+      },
+    });
 
-    await page.getByRole("button", { name: "X" }).click();
-    await page.getByRole("button", { name: "Save Urls" }).click();
+    await getDeleteURLButton(page).click();
 
-    rssSaveResponse = await rssSaveResponsePromise;
-    expect(rssSaveResponse.ok()).toStrictEqual(true);
-    expect(rssSaveResponse.request().postDataJSON()).toStrictEqual([
-      [expect.stringContaining("-"), []],
-    ]);
+    await assertSaveRSSUrls({
+      page,
+      expectedPostData: [[userId, []]],
+      trigger: async () => {
+        await saveUrlsButton.click();
+      },
+    });
   });
 
   test("subscribe and unsubscribe", async ({ page }) => {
-    await page.getByText("Subscribe").first().click();
-    await page.getByPlaceholder("email@domain.com").fill(subscribeEmail);
+    const { UserId: userId } = await login(page, username, password);
 
-    const subscribeResponsePromise = page.waitForResponse(
-      "**/rpc/IRPCStore/subscribe"
-    );
-    await page.getByText("Subscribe").nth(2).click();
+    await getSubscribeModalButton(page).click();
+    await getSubscribeEmailField(page).fill(subscribeEmail);
 
-    const subscribeResponse = await subscribeResponsePromise;
-    expect(subscribeResponse.ok()).toStrictEqual(true);
-    expect(subscribeResponse.request().postDataJSON()).toStrictEqual([
-      [expect.stringContaining("-"), subscribeEmail],
-    ]);
+    await assertSubscribe({
+      page,
+      expectedPostData: [[userId, subscribeEmail]],
+      trigger: async () => {
+        await getSubscribeFormButton(page).click();
+      },
+    });
 
-    const unsubscribeResponsePromise = page.waitForResponse(
-      "**/rpc/IRPCStore/unsubscribe"
-    );
-    await page.getByRole("button", { name: "Unsubscribe" }).click();
-
-    const unsubscribeResponse = await unsubscribeResponsePromise;
-    expect(unsubscribeResponse.ok()).toStrictEqual(true);
-    expect(unsubscribeResponse.request().postDataJSON()).toStrictEqual([
-      subscribeEmail,
-    ]);
+    await assertUnsubscribe({
+      page,
+      expectedPostData: [subscribeEmail],
+      trigger: async () => {
+        await getUnsubscribeButton(page).click();
+      },
+    });
   });
 });
