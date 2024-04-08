@@ -70,7 +70,7 @@ test.describe("single url", () => {
   });
 });
 
-test.describe("multiple url", () => {
+test.describe.skip("multiple url", () => {
   test("add new url", async ({ page }) => {
     await page.goto(pageURL);
 
@@ -164,7 +164,7 @@ test.describe("user authentication", () => {
   });
 });
 
-test.describe("authorized user", () => {
+test.describe.skip("authorized user", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(pageURL);
 

@@ -50,7 +50,7 @@ jobs:
           bunx playwright install-deps
       - 
         name: Run Playwright tests
-        run: PAGE_URL=http://localhost:8080/ bunx playwright test
+        run: PAGE_URL=http://localhost:8080 bunx playwright test --reporter list
       - 
         name: Teardown end-to-end testing
         if: always()
