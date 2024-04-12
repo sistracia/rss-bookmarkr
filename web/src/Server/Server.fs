@@ -260,6 +260,8 @@ module DataAccess =
                         rss_urls ru ON u.id = ru.user_id 
                     JOIN
                         rss_histories rh ON ru .url = rh.url
+                    WHERE 
+                    	u.email <> ''
                     GROUP BY
                         u.email;"""
         |> Sql.execute (fun read ->
@@ -336,7 +338,7 @@ module Mail =
     type IMailService =
         abstract member SendMail: mailData: MailData -> unit
 
-    type MailService(mailSettings: MailSettings, logger: ILogger<unit>) =
+    type MailService(mailSettings: MailSettings) =
 
         interface IMailService with
             member __.SendMail(mailData: MailData) =
@@ -374,8 +376,7 @@ module RSSWorker =
     type IRSSProcessingService =
         abstract member DoWork: stoppingToken: CancellationToken -> Task
 
-    type RSSProcessingService
-        (connectionString: string, publicHost: string, mailService: Mail.IMailService, logger: ILogger<unit>) =
+    type RSSProcessingService(connectionString: string, publicHost: string, mailService: Mail.IMailService) =
 
         member private __.GetLatestRemoteRSS(histories: RSSHistory array) =
             async {
@@ -490,23 +491,22 @@ module RSSWorker =
 
             member this.DoWork(stoppingToken: CancellationToken) =
                 task {
-                    try
-                        let! (newRSSList: RSS array option array) =
-                            DataAccess.aggreateRssEmails stoppingToken connectionString
-                            |> List.map (this.ProceedSubscriber)
-                            |> Async.Parallel
 
-                        newRSSList
-                        |> Array.choose id // Remove `option` from `RSS array option array`
-                        |> Array.fold (fun (acc: RSS array) (elem: RSS array) -> Array.concat [ acc; elem ]) [||] // Flatten the RSS list
-                        |> Array.map (fun (rss: RSS) -> (rss.Origin, rss)) // Transform to key-value pair to be able convert to Map
-                        |> Map.ofArray // Convert to Map to remove duplicate item
-                        |> Map.toArray // Convert back to list
-                        |> Array.map (fun (_, rss: RSS) -> rss) // Get only the value
-                        |> (this.CreateRSSHistories) // Map `RSS` to `RSSHistory`
-                        |> DataAccess.renewRSSHistories stoppingToken connectionString // Save to DB
-                    with (ex: exn) ->
-                        logger.LogInformation $"error RSSProcessingService.DoWork: {ex.Message}"
+                    let! (newRSSList: RSS array option array) =
+                        DataAccess.aggreateRssEmails stoppingToken connectionString
+                        |> List.map (this.ProceedSubscriber)
+                        |> Async.Parallel
+
+                    newRSSList
+                    |> Array.choose id // Remove `option` from `RSS array option array`
+                    |> Array.fold (fun (acc: RSS array) (elem: RSS array) -> Array.concat [ acc; elem ]) [||] // Flatten the RSS list
+                    |> Array.map (fun (rss: RSS) -> (rss.Origin, rss)) // Transform to key-value pair to be able convert to Map
+                    |> Map.ofArray // Convert to Map to remove duplicate item
+                    |> Map.toArray // Convert back to list
+                    |> Array.map (fun (_, rss: RSS) -> rss) // Get only the value
+                    |> (this.CreateRSSHistories) // Map `RSS` to `RSSHistory`
+                    |> DataAccess.renewRSSHistories stoppingToken connectionString // Save to DB
+
                 }
 
 module Worker =
@@ -524,21 +524,24 @@ module Worker =
 
         member private _.DoWork(stoppingToken: CancellationToken) : Task =
             task {
-                logger.LogInformation "Background service running."
+                try
+                    logger.LogInformation "Background service running."
 
-                let mutable isSend = false
+                    let mutable isSend = false
 
-                while true do
-                    logger.LogInformation "Background service run."
+                    while true do
+                        logger.LogInformation "Background service run."
 
-                    // Process RSS subscription every within range 12 midnight once
-                    if DateTime.Now.Hour = 0 && not isSend then
-                        do! rssProcessingService.DoWork stoppingToken
-                        isSend <- true
-                    else if DateTime.Now.Hour <> 0 then
-                        isSend <- false
+                        // Process RSS subscription every within range 12 midnight once
+                        if DateTime.Now.Hour = 0 && not isSend then
+                            do! rssProcessingService.DoWork stoppingToken
+                            isSend <- true
+                        else if DateTime.Now.Hour <> 0 then
+                            isSend <- false
 
-                    do! Task.Delay(delay, stoppingToken)
+                        do! Task.Delay(delay, stoppingToken)
+                with (ex: exn) ->
+                    logger.LogInformation $"error SendEmailSubscription.DoWork: {ex.Message}"
             }
 
         /// Called when a background service needs to gracefully shut down.
@@ -725,10 +728,10 @@ let app =
             let mailSettings =
                 configuration.GetSection(MailSettings.SettingName).Get<MailSettings>()
 
-            let mailService = Mail.MailService(mailSettings, logger)
+            let mailService = Mail.MailService(mailSettings)
 
             let rssProcessingService =
-                RSSWorker.RSSProcessingService(connectionString, publicHost, mailService, logger)
+                RSSWorker.RSSProcessingService(connectionString, publicHost, mailService)
 
             let minutesInMS = 1000 * 60
 
