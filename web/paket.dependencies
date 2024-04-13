@@ -14,5 +14,4 @@ nuget Feliz
 nuget Feliz.DaisyUI
 nuget MailKit
 nuget Npgsql.FSharp
-nuget Saturn
 nuget System.ServiceModel.Syndication
