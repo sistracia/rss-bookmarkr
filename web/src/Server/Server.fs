@@ -13,7 +13,7 @@ open Microsoft.Extensions.Options
 open MimeKit
 open MailKit.Net.Smtp
 open Saturn
-open Giraffe.Core
+open Giraffe
 open Fable.Remoting.Server
 open Fable.Remoting.Giraffe
 open Npgsql.FSharp
@@ -51,6 +51,12 @@ type HttpContext with
         match this.GetService<IConfiguration>().GetConnectionString rssDbConnectionStringKey with
         | null -> failwith "Missing connection string"
         | v -> v
+
+[<CLIMutable>]
+type RSSQueryString = { Url: string array }
+
+[<CLIMutable>]
+type UnsubscribeQueryString = { Email: string }
 
 type User =
     { Id: string
@@ -670,23 +676,26 @@ module Handler =
     let unsubscribe (connectionString: string) (email: string) : unit Async =
         async { (DataAccess.unsetUserEmail connectionString email) |> ignore }
 
-    let rssIndexAction (ctx: HttpContext) =
-        task {
-            let! rssList = ctx.Request.Query.Item("url").ToArray() |> getRSSList
-            return! rssList |> Controller.json ctx
-        }
+module ApiHandler =
+    let rssListAction (next: HttpFunc) (ctx: HttpContext) =
+        match ctx.TryBindQueryString<RSSQueryString>() with
+        | Error(err: string) -> RequestErrors.BAD_REQUEST err next ctx
+        | Ok(rssQueryString: RSSQueryString) ->
+            task {
+                let! (rssList: RSS seq) = rssQueryString.Url |> Handler.getRSSList
+                return! json rssList next ctx
+            }
 
-    let unsubsribeIndexAction (ctx: HttpContext) =
-        task {
-            return!
-                match ctx.Request.Query.Item("email").ToArray() |> Array.tryHead with
-                | None -> Controller.renderHtml ctx Views.unsubsribePage
-                | Some(email: string) ->
-                    task {
-                        do! unsubscribe ctx.RssDbConnectionString email
-                        return! Controller.renderHtml ctx Views.unsubsribePage
-                    }
-        }
+module ViewHandler =
+
+    let unsubsribePageAction (next: HttpFunc) (ctx: HttpContext) =
+        match ctx.TryBindQueryString<UnsubscribeQueryString>() with
+        | Error(err: string) -> RequestErrors.BAD_REQUEST err next ctx
+        | Ok(unsubscribeQueryString: UnsubscribeQueryString) ->
+            task {
+                do! Handler.unsubscribe ctx.RssDbConnectionString unsubscribeQueryString.Email
+                return! htmlView Views.unsubsribePage next ctx
+            }
 
 let rpcStore (ctx: HttpContext) =
     { IRPCStore.getRSSList = Handler.getRSSList
@@ -703,15 +712,13 @@ let webApp =
     |> Remoting.buildHttpHandler
 
 module Router =
-    let rssController = controller { index Handler.rssIndexAction }
-    let unsubscribeController = controller { index Handler.unsubsribeIndexAction }
-    let apiRouter = router { forward "/rss" rssController }
+    let apiRouter = router { get "/rss" ApiHandler.rssListAction }
 
     let defaultView =
         router {
             forward "" webApp
             forward "/api" apiRouter
-            forward "/unsubscribe" unsubscribeController
+            get "/unsubscribe" ViewHandler.unsubsribePageAction
         }
 
 let app =
