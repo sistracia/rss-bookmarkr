@@ -9,11 +9,10 @@ open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 open Microsoft.Extensions.Configuration
-open Microsoft.AspNetCore.Builder
-open Microsoft.AspNetCore.Cors.Infrastructure
-open Microsoft.AspNetCore.Hosting
+open Microsoft.Extensions.Options
 open MimeKit
 open MailKit.Net.Smtp
+open Saturn
 open Giraffe
 open Fable.Remoting.Server
 open Fable.Remoting.Giraffe
@@ -22,6 +21,27 @@ open Npgsql.FSharp
 open Shared
 
 let rssDbConnectionStringKey = "RssDb"
+
+
+/// A full background service using a dedicated type.
+/// Ref: https://github.com/CompositionalIT/background-services
+type ApplicationBuilder with
+
+    /// Custom keyword to more easily add a background worker to ASP .NET
+    [<CustomOperation "background_service">]
+    member _.BackgroundService(state: ApplicationState, serviceBuilder) =
+        { state with
+            ServicesConfig =
+                (fun svcCollection -> svcCollection.AddHostedService serviceBuilder)
+                :: state.ServicesConfig }
+
+    member this.BackgroundService(state: ApplicationState, backgroundSvc) =
+        let worker serviceProvider =
+            { new BackgroundService() with
+                member _.ExecuteAsync cancellationToken =
+                    backgroundSvc serviceProvider cancellationToken }
+
+        this.BackgroundService(state, worker)
 
 /// Ref: https://github.com/CompositionalIT/TodoService/blob/main/src/app/Todo.Api.fs
 type HttpContext with
@@ -691,88 +711,42 @@ let webApp =
     |> Remoting.fromContext rpcStore
     |> Remoting.buildHttpHandler
 
-// ---------------------------------
-// Web app
-// ---------------------------------
+module Router =
+    let apiRouter = router { get "/rss" ApiHandler.rssListAction }
 
-let handler =
-    choose
-        [ webApp
-          subRoute "/api" (choose [ GET >=> route "/rss" >=> ApiHandler.rssListAction ])
-          route "/unsubscribe" >=> ViewHandler.unsubsribePageAction ]
+    let defaultView =
+        router {
+            forward "" webApp
+            forward "/api" apiRouter
+            get "/unsubscribe" ViewHandler.unsubsribePageAction
+        }
 
-// ---------------------------------
-// Error handler
-// ---------------------------------
+let app =
+    application {
+        use_static "wwwroot"
 
-let errorHandler (ex: Exception) (logger: ILogger) =
-    logger.LogError(ex, "An unhandled exception has occurred while executing the request.")
-    clearResponse >=> setStatusCode 500 >=> text ex.Message
+        background_service (fun (serviceProvider: IServiceProvider) ->
+            let configuration = serviceProvider.GetService<IConfiguration>()
 
-// ---------------------------------
-// Config and Main
-// ---------------------------------
+            let logger = serviceProvider.GetService<ILogger<unit>>()
 
-let configureCors (builder: CorsPolicyBuilder) =
-    builder
-        .WithOrigins("http://localhost:5000", "https://localhost:5001")
-        .AllowAnyMethod()
-        .AllowAnyHeader()
-    |> ignore
+            let connectionString = (configuration.GetConnectionString rssDbConnectionStringKey)
 
-let configureApp (app: IApplicationBuilder) =
-    let env = app.ApplicationServices.GetService<IWebHostEnvironment>()
+            let mailSettings =
+                configuration.GetSection(MailSettings.SettingName).Get<MailSettings>()
 
-    (match env.IsDevelopment() with
-     | true -> app.UseDeveloperExceptionPage()
-     | false -> app.UseGiraffeErrorHandler(errorHandler).UseHttpsRedirection())
-        .UseCors(configureCors)
-        .UseFileServer() // Short
-        .UseGiraffe(handler)
+            let mailService = Mail.MailService(mailSettings)
 
-let configureServices (services: IServiceCollection) =
-    services.AddCors() |> ignore
-    services.AddGiraffe() |> ignore
+            let rssProcessingService =
+                RSSWorker.RSSProcessingService(connectionString, publicHost, mailService)
 
-    services.AddHostedService(fun (serviceProvider) ->
-        let configuration = serviceProvider.GetService<IConfiguration>()
+            let minutesInMS = 1000 * 60
 
-        let logger = serviceProvider.GetService<ILogger<unit>>()
+            new Worker.SendEmailSubscription(minutesInMS, rssProcessingService, logger))
 
-        let connectionString = (configuration.GetConnectionString rssDbConnectionStringKey)
+        use_router Router.defaultView
+        memory_cache
+        use_gzip
+    }
 
-        let mailSettings =
-            configuration.GetSection(MailSettings.SettingName).Get<MailSettings>()
-
-        let mailService = Mail.MailService(mailSettings)
-
-        let rssProcessingService =
-            RSSWorker.RSSProcessingService(connectionString, publicHost, mailService)
-
-        let minutesInMS = 1000 * 60
-
-        new Worker.SendEmailSubscription(minutesInMS, rssProcessingService, logger))
-    |> ignore
-
-let configureLogging (builder: ILoggingBuilder) =
-    builder.AddConsole().AddDebug() |> ignore
-
-[<EntryPoint>]
-let main args =
-    let contentRoot = Directory.GetCurrentDirectory()
-    let webRoot = Path.Combine(contentRoot, "wwwroot")
-
-    Host
-        .CreateDefaultBuilder(args)
-        .ConfigureWebHostDefaults(fun webHostBuilder ->
-            webHostBuilder
-                .UseContentRoot(contentRoot)
-                .UseWebRoot(webRoot)
-                .Configure(Action<IApplicationBuilder> configureApp)
-                .ConfigureServices(configureServices)
-                .ConfigureLogging(configureLogging)
-            |> ignore)
-        .Build()
-        .Run()
-
-    0
+run app
