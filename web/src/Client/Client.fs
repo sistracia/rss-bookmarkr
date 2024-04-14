@@ -1,4 +1,4 @@
-module App
+﻿module App
 
 open System
 open Feliz
@@ -54,15 +54,27 @@ module RPC =
         async { return! store.loginOrRegister loginForm }
 
     let saveRSSUrlssss (userId: string, rssUrls: string array) : unit Async =
-        async { do! store.saveRSSUrls (userId, rssUrls) }
+        async {
+            do!
+                store.saveRSSUrls (
+                    { SaveRSSUrlReq.Urls = rssUrls
+                      SaveRSSUrlReq.UserId = userId }
+                )
+        }
 
     let initLogin (sessionId: string) : LoginResponse Async =
-        async { return! store.initLogin sessionId }
+        async { return! store.initLogin { InitLoginReq.SessionId = sessionId } }
 
     let subscribe (userId: string, email: string) : unit Async =
-        async { do! store.subscribe (userId, email) }
+        async {
+            do!
+                store.subscribe
+                    { SubscribeReq.Email = email
+                      SubscribeReq.UserId = userId }
+        }
 
-    let unsubscribe (email: string) : unit Async = async { do! store.unsubscribe email }
+    let unsubscribe (email: string) : unit Async =
+        async { do! store.unsubscribe { UnsubscribeReq.Email = email } }
 
 module Component =
     let renderError (error: string option) : Fable.React.ReactElement =

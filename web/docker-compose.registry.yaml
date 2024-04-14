@@ -3,7 +3,6 @@ services:
     image: localhost:5000/rss-bookmarkr
     container_name: rss-bookmarkr
     restart: unless-stopped
-    ports:
-      - "${PORT}:${ASPNETCORE_URLS_PORT}"
+    network_mode: "host"
     env_file:
       - .env

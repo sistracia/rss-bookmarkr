@@ -3,8 +3,18 @@ import { RSSBokmarkrPage } from "./rssbokmarkr-page";
 
 const pageURL = process.env.PAGE_URL || "http://localhost:8080";
 
-const username = "testingusername";
-const password = "testingpassword";
+const generateRandomString = () => {
+  return (Math.random() + 1).toString(36).substring(2);
+};
+
+const generateUsername = () => {
+  return `${generateRandomString()}username`;
+};
+
+const generatePassword = () => {
+  return `${generateRandomString()}password`;
+};
+
 const subscribeEmail = "test@test.com";
 
 const rssURLS = [
@@ -94,7 +104,7 @@ test.describe("user authentication", () => {
     const rssBookmarkrPage = new RSSBokmarkrPage(pageURL, page);
     await rssBookmarkrPage.goto();
 
-    await rssBookmarkrPage.login(username, password);
+    await rssBookmarkrPage.login(generateUsername(), generatePassword());
     await rssBookmarkrPage.logout();
   });
 });
@@ -103,7 +113,7 @@ test.describe("authorized user", () => {
   test("save urls and delete the url", async ({ page }) => {
     const rssBookmarkrPage = new RSSBokmarkrPage(pageURL, page);
     await rssBookmarkrPage.goto();
-    await rssBookmarkrPage.login(username, password);
+    await rssBookmarkrPage.login(generateUsername(), generatePassword());
 
     await rssBookmarkrPage.addURL(overreactedURL);
     await rssBookmarkrPage.saveURLs([overreactedURL]);
@@ -115,7 +125,7 @@ test.describe("authorized user", () => {
   test("subscribe and unsubscribe", async ({ page }) => {
     const rssBookmarkrPage = new RSSBokmarkrPage(pageURL, page);
     await rssBookmarkrPage.goto();
-    await rssBookmarkrPage.login(username, password);
+    await rssBookmarkrPage.login(generateUsername(), generatePassword());
 
     await rssBookmarkrPage.subscribe(subscribeEmail);
     await rssBookmarkrPage.unsubscribe(subscribeEmail);

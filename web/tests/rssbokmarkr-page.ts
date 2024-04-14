@@ -99,7 +99,9 @@ export class RSSBokmarkrPage {
 
   async saveURLs(expectedURLs: string[]) {
     await this.assertSaveRSSUrls({
-      expectedPostData: [[this.loginResonse?.["UserId"], expectedURLs]],
+      expectedPostData: [
+        { UserId: this.loginResonse?.["UserId"], Urls: expectedURLs },
+      ],
       trigger: async () => {
         await this.saveURLsButton.click();
       },
@@ -111,7 +113,9 @@ export class RSSBokmarkrPage {
     await this.subscribeEmailField.fill(email);
 
     await this.assertSubscribe({
-      expectedPostData: [[this.loginResonse?.["UserId"], email]],
+      expectedPostData: [
+        { UserId: this.loginResonse?.["UserId"], Email: email },
+      ],
       trigger: async () => {
         await this.subscribeFormButton.click();
       },
@@ -120,7 +124,7 @@ export class RSSBokmarkrPage {
 
   async unsubscribe(email: string) {
     await this.assertUnsubscribe({
-      expectedPostData: [email],
+      expectedPostData: [{ Email: email }],
       trigger: async () => {
         await this.unsubscribeButton.click();
       },
@@ -154,7 +158,7 @@ export class RSSBokmarkrPage {
 
   async assertRSSList(option: {
     trigger: () => Promise<void>;
-    expectedPostData: unknown;
+    expectedPostData: [string[]];
   }) {
     return await this.assertAPICall({
       ...option,
@@ -164,7 +168,7 @@ export class RSSBokmarkrPage {
 
   async assertSaveRSSUrls(option: {
     trigger: () => Promise<void>;
-    expectedPostData: unknown;
+    expectedPostData: [{ UserId: string; Urls: string[] }];
   }) {
     return await this.assertAPICall({
       ...option,
@@ -174,7 +178,7 @@ export class RSSBokmarkrPage {
 
   async assertSubscribe(option: {
     trigger: () => Promise<void>;
-    expectedPostData: unknown;
+    expectedPostData: [{ UserId: string; Email: string }];
   }) {
     return await this.assertAPICall({
       ...option,
@@ -184,7 +188,7 @@ export class RSSBokmarkrPage {
 
   async assertUnsubscribe(option: {
     trigger: () => Promise<void>;
-    expectedPostData: unknown;
+    expectedPostData: [{ Email: string }];
   }) {
     return await this.assertAPICall({
       ...option,
@@ -194,7 +198,7 @@ export class RSSBokmarkrPage {
 
   async assertLoginOrRegister(option: {
     trigger: () => Promise<void>;
-    expectedPostData: unknown;
+    expectedPostData: [{ Username: string; Password: string }];
   }) {
     return await this.assertAPICall({
       ...option,

@@ -87,8 +87,6 @@ MailSettings__SenderEmail=<YOUR@EMAIL>
 MailSettings__UserName=<YOUR MAIL SERVER USERNAME>
 MailSettings__Password=<YOUR MAIL SERVER PASWORD>
 PUBLIC_HOST=<YOUR PUBLIC HOST>
-PORT=<PUBLISHED PORT FOR THE SERVER APP INSIDE Docker> # Used for docker-compose
-ASPNETCORE_URLS_PORT=<SERVER APP PORT INSIDE Docker>
 ASPNETCORE_URLS=<SERVER APP HOST AND PORT INSIDE Docker>
 ```
 
@@ -97,7 +95,7 @@ ASPNETCORE_URLS=<SERVER APP HOST AND PORT INSIDE Docker>
 See the [docker-compose.yaml here](./web/docker-compose.yaml).
 
 ```bash
-PORT=<PUBLISHD PORT> ASPNETCORE_URLS_PORT=<SERVER APP PORT INSIDE Docker> docker compose up
+docker compose up -f docker-compose.yaml
 ```
 
 #### Using `docker build` and `docker run`
@@ -107,7 +105,7 @@ PORT=<PUBLISHD PORT> ASPNETCORE_URLS_PORT=<SERVER APP PORT INSIDE Docker> docker
 docker build -t rss-bookmarkr -f ./Dockerfile .
 
 # Run
-docker run --env-file ./.env -p <PUBLISHD PORT>:<SERVER APP PORT INSIDE Docker> rss-bookmarkr
+docker run --env-file ./.env rss-bookmarkr
 ## or
 docker run \
 -e ConnectionStrings__RssDb="POSTGRES CONNECTION STRING" \
@@ -119,6 +117,24 @@ docker run \
 -e MailSettings__Password=<YOUR MAIL SERVER PASWORD> \
 -e PUBLIC_HOST=<YOUR PUBLIC HOST> \
 -e ASPNETCORE_URLS="<SERVER APP HOST AND PORT INSIDE Docker>" \
--p <PUBLISHD PORT>:<SERVER APP PORT INSIDE Docker> \
 rss-bookmarkr
+```
+
+## Testing
+
+Prepare the app in isolated Docker environment.
+
+```bash
+make test_e2e_setup
+```
+Wait until the app's container healthy, then run the migration.
+
+```bash
+make test_e2e_migration
+```
+
+Cleanup the app's container
+
+```bash
+make test_e2e_teardown
 ```

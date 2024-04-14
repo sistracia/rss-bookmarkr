@@ -22,6 +22,16 @@ open Shared
 
 let rssDbConnectionStringKey = "RssDb"
 
+/// Ref: https://github.com/giraffe-fsharp/Giraffe/issues/323#issuecomment-777622090
+let tryBindJson<'T> (parsingErrorHandler: string -> HttpHandler) (successHandler: 'T -> HttpHandler) : HttpHandler =
+    fun (next: HttpFunc) (ctx: HttpContext) ->
+        task {
+            try
+                let! model = ctx.BindJsonAsync<'T>()
+                return! successHandler model next ctx
+            with (ex: exn) ->
+                return! parsingErrorHandler ex.Message next ctx
+        }
 
 /// A full background service using a dedicated type.
 /// Ref: https://github.com/CompositionalIT/background-services
@@ -53,10 +63,37 @@ type HttpContext with
         | v -> v
 
 [<CLIMutable>]
-type RSSQueryString = { Url: string array }
+type RSSQueryString =
+    { Url: string array }
+
+    override this.ToString() =
+        sprintf "Url: %s" (String.concat ", " this.Url)
+
+    member _.HasErrors() = None
+
+    interface IModelValidation<RSSQueryString> with
+        member this.Validate() =
+            match this.HasErrors() with
+            | Some msg -> Error(RequestErrors.badRequest (text msg))
+            | None -> Ok this
 
 [<CLIMutable>]
-type UnsubscribeQueryString = { Email: string }
+type UnsubscribeQueryString =
+    { Email: string }
+
+    override this.ToString() = sprintf "Email: %s" this.Email
+
+    member this.HasErrors() =
+        if this.Email.Length <= 0 then
+            Some "Email is required."
+        else
+            None
+
+    interface IModelValidation<UnsubscribeQueryString> with
+        member this.Validate() =
+            match this.HasErrors() with
+            | Some msg -> Error(RequestErrors.badRequest (text msg))
+            | None -> Ok this
 
 type User =
     { Id: string
@@ -627,27 +664,30 @@ module Handler =
             return loginResponse
         }
 
-    let saveRSSUrls (connectionString: string) (userId: string, urls: string array) : unit Async =
+    let saveRSSUrls (connectionString: string) (saveRSSUrlReq: SaveRSSUrlReq) : unit Async =
         async {
-            let existingUrls = (DataAccess.getRSSUrls connectionString userId) |> List.toArray
+            let existingUrls =
+                (DataAccess.getRSSUrls connectionString saveRSSUrlReq.UserId) |> List.toArray
 
             let newUrls =
-                urls |> Array.filter (fun url -> not <| Array.contains url existingUrls)
+                saveRSSUrlReq.Urls
+                |> Array.filter (fun url -> not <| Array.contains url existingUrls)
 
             let deletedUrls =
-                existingUrls |> Array.filter (fun url -> not <| Array.contains url urls)
+                existingUrls
+                |> Array.filter (fun url -> not <| Array.contains url saveRSSUrlReq.Urls)
 
             if newUrls.Length <> 0 then
-                DataAccess.insertUrls connectionString userId newUrls
+                DataAccess.insertUrls connectionString saveRSSUrlReq.UserId newUrls
 
             if deletedUrls.Length <> 0 then
-                DataAccess.deleteUrls connectionString userId deletedUrls
+                DataAccess.deleteUrls connectionString saveRSSUrlReq.UserId deletedUrls
         }
 
-    let initLogin (connectionString: string) (sessionId: string) : LoginResponse Async =
+    let initLogin (connectionString: string) (initLoginReq: InitLoginReq) : LoginResponse Async =
         async {
             return
-                sessionId
+                initLoginReq.SessionId
                 |> DataAccess.getUserSession connectionString
                 |> (function
                 | None ->
@@ -657,43 +697,78 @@ module Handler =
                     let loginResult =
                         { LoginResult.UserId = user.Id
                           LoginResult.RssUrls = (DataAccess.getRSSUrls connectionString user.Id) |> List.toArray
-                          LoginResult.SessionId = sessionId
+                          LoginResult.SessionId = initLoginReq.SessionId
                           LoginResult.Email = user.Email }
 
                     Success loginResult)
         }
 
-    let subscribe (connectionString: string) (userId: string, email: string) : unit Async =
+    let subscribe (connectionString: string) (subscribeReq: SubscribeReq) : unit Async =
         async {
-            (DataAccess.getRSSUrls connectionString userId)
+            (DataAccess.getRSSUrls connectionString subscribeReq.UserId)
             |> List.map (fun (rssURL: string) ->
                 { RSSHistory.Url = rssURL
                   RSSHistory.LatestUpdated = DateTime.Now })
-            |> (DataAccess.setUserEmail connectionString (userId, email))
+            |> (DataAccess.setUserEmail connectionString (subscribeReq.UserId, subscribeReq.Email))
             |> ignore
         }
 
-    let unsubscribe (connectionString: string) (email: string) : unit Async =
-        async { (DataAccess.unsetUserEmail connectionString email) |> ignore }
+    let unsubscribe (connectionString: string) (unsubscribeReq: UnsubscribeReq) : unit Async =
+        async { (DataAccess.unsetUserEmail connectionString unsubscribeReq.Email) |> ignore }
 
 module ApiHandler =
-    let rssListAction (next: HttpFunc) (ctx: HttpContext) =
-        match ctx.TryBindQueryString<RSSQueryString>() with
-        | Error(err: string) -> RequestErrors.BAD_REQUEST err next ctx
-        | Ok(rssQueryString: RSSQueryString) ->
+    let rssListAction (rssQueryString: RSSQueryString) : HttpHandler =
+        fun (next: HttpFunc) (ctx: HttpContext) ->
             task {
                 let! (rssList: RSS seq) = rssQueryString.Url |> Handler.getRSSList
                 return! json rssList next ctx
             }
 
+    let loginOrRegisterAction (loginForm: LoginForm) : HttpHandler =
+        fun (next: HttpFunc) (ctx: HttpContext) ->
+            task {
+                let! (loginResponse: LoginResponse) = (Handler.loginOrRegister ctx.RssDbConnectionString loginForm)
+                return! json loginResponse next ctx
+            }
+
+    let saveRSSUrlsAction (saveRSSUrlReq: SaveRSSUrlReq) : HttpHandler =
+        fun (next: HttpFunc) (ctx: HttpContext) ->
+            task {
+                do! (Handler.saveRSSUrls ctx.RssDbConnectionString saveRSSUrlReq)
+                return! Successful.OK "ok" next ctx
+            }
+
+    let initLoginAction (initLoginReq: InitLoginReq) : HttpHandler =
+        fun (next: HttpFunc) (ctx: HttpContext) ->
+            task {
+                let! (loginResponse: LoginResponse) = (Handler.initLogin ctx.RssDbConnectionString initLoginReq)
+                return! json loginResponse next ctx
+            }
+
+    let subscribeAction (subscribeReq: SubscribeReq) : HttpHandler =
+        fun (next: HttpFunc) (ctx: HttpContext) ->
+            task {
+                do! (Handler.subscribe ctx.RssDbConnectionString subscribeReq)
+                return! Successful.OK "ok" next ctx
+            }
+
+    let unsubscribeAction (unsubscribeReq: UnsubscribeReq) : HttpHandler =
+        fun (next: HttpFunc) (ctx: HttpContext) ->
+            task {
+                do! (Handler.unsubscribe ctx.RssDbConnectionString unsubscribeReq)
+                return! Successful.OK "ok" next ctx
+            }
+
 module ViewHandler =
 
-    let unsubsribePageAction (next: HttpFunc) (ctx: HttpContext) =
-        match ctx.TryBindQueryString<UnsubscribeQueryString>() with
-        | Error(err: string) -> RequestErrors.BAD_REQUEST err next ctx
-        | Ok(unsubscribeQueryString: UnsubscribeQueryString) ->
+    let unsubsribePageAction (unsubscribeQueryString: UnsubscribeQueryString) : HttpHandler =
+        fun (next: HttpFunc) (ctx: HttpContext) ->
             task {
-                do! Handler.unsubscribe ctx.RssDbConnectionString unsubscribeQueryString.Email
+                do!
+                    Handler.unsubscribe
+                        ctx.RssDbConnectionString
+                        { UnsubscribeReq.Email = unsubscribeQueryString.Email }
+
                 return! htmlView Views.unsubsribePage next ctx
             }
 
@@ -712,13 +787,39 @@ let webApp =
     |> Remoting.buildHttpHandler
 
 module Router =
-    let apiRouter = router { get "/rss" ApiHandler.rssListAction }
+    let apiRouter =
+        router {
+            get "/rss" (tryBindQuery<RSSQueryString> RequestErrors.BAD_REQUEST None (ApiHandler.rssListAction))
+
+            post
+                "/login"
+                (tryBindJson<LoginForm> RequestErrors.BAD_REQUEST (validateModel ApiHandler.loginOrRegisterAction))
+
+            post
+                "/save-urls"
+                (tryBindJson<SaveRSSUrlReq> RequestErrors.BAD_REQUEST (validateModel ApiHandler.saveRSSUrlsAction))
+
+            post
+                "/init-login"
+                (tryBindJson<InitLoginReq> RequestErrors.BAD_REQUEST (validateModel ApiHandler.initLoginAction))
+
+            post
+                "/subscribe"
+                (tryBindJson<SubscribeReq> RequestErrors.BAD_REQUEST (validateModel ApiHandler.subscribeAction))
+
+            post
+                "/unsubscribe"
+                (tryBindJson<UnsubscribeReq> RequestErrors.BAD_REQUEST (validateModel ApiHandler.unsubscribeAction))
+        }
 
     let defaultView =
         router {
             forward "" webApp
             forward "/api" apiRouter
-            get "/unsubscribe" ViewHandler.unsubsribePageAction
+
+            get
+                "/unsubscribe"
+                (tryBindQuery<UnsubscribeQueryString> RequestErrors.BAD_REQUEST None (ViewHandler.unsubsribePageAction))
         }
 
 let app =
