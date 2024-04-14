@@ -1,4 +1,4 @@
-﻿module App
+module App
 
 open System
 open Feliz
@@ -19,9 +19,7 @@ open Elmish.HMR
 type User =
     { UserId: string
       SessionId: string
-      Email: string }
-
-    member this.IsSubscribing = this.Email <> ""
+      Email: string option }
 
 
 /// Copy from https://github.com/Dzoukr/Yobo/blob/master/src/Yobo.Client/TokenStorage.fs
@@ -32,7 +30,7 @@ module Session =
         Browser.WebStorage.localStorage.getItem (sessionKey)
         |> (function
         | null -> None
-        | x -> Some(x))
+        | (x: string) -> Some(x))
         |> Option.bind (fun x -> if String.IsNullOrWhiteSpace(x) then None else Some x)
 
     let removeSessionId () =
@@ -270,12 +268,13 @@ module RSS =
                                         match user with
                                         | None -> ()
                                         | Some(user: User) ->
-                                            if user.IsSubscribing then
+                                            match user.Email with
+                                            | Some(email: string) ->
                                                 Daisy.button.button
                                                     [ button.link
-                                                      prop.onClick (fun _ -> dispatch (Unsubscribe user.Email))
+                                                      prop.onClick (fun _ -> dispatch (Unsubscribe email))
                                                       prop.text "Unsubscribe" ]
-                                            else
+                                            | None ->
                                                 React.fragment
                                                     [ Daisy.button.label
                                                           [ button.link
@@ -542,7 +541,7 @@ let update (msg: Msg) (state: State) : State * Cmd<Msg> =
                 match state.User with
                 | None -> state.User
                 | Some(user: User) ->
-                    let newUser = { user with Email = email }
+                    let newUser: User = { user with Email = Some email }
                     Some newUser
 
             let nextState = { state with User = user }

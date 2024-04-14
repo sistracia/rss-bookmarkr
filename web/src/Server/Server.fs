@@ -62,7 +62,7 @@ type User =
     { Id: string
       Username: string
       Password: string
-      Email: string }
+      Email: string option }
 
 type RSSUrl =
     { Id: string
@@ -177,7 +177,7 @@ module DataAccess =
             { User.Id = read.string "id"
               User.Username = read.text "username"
               User.Password = read.text "password"
-              User.Email = read.text "email" })
+              User.Email = read.textOrNone "email" })
         |> List.tryHead
 
     let insertUser (connectionString: string) (loginForm: LoginForm) =
@@ -249,7 +249,7 @@ module DataAccess =
             { User.Id = read.string "user_id"
               User.Username = read.text "user_username"
               User.Password = read.text "user_password"
-              User.Email = read.text "user_email" })
+              User.Email = read.textOrNone "user_email" })
         |> List.tryHead
 
     let aggreateRssEmails (cancellationToken: CancellationToken) (connectionString: string) =
@@ -285,7 +285,7 @@ module DataAccess =
     let unsetUserEmail (connectionString: string) (email: string) =
         connectionString
         |> Sql.connect
-        |> Sql.query "UPDATE users SET email = '' WHERE email = @email"
+        |> Sql.query "UPDATE users SET email = NULL WHERE email = @email"
         |> Sql.parameters [ "@email", Sql.text email ]
         |> Sql.executeNonQuery
         |> ignore
@@ -594,7 +594,7 @@ module Handler =
             { LoginResult.UserId = userId
               LoginResult.RssUrls = Array.empty
               LoginResult.SessionId = sessionId
-              LoginResult.Email = "" }
+              LoginResult.Email = None }
 
         Success loginResult
 
