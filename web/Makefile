@@ -50,3 +50,6 @@ test_e2e_migration: test_e2e_migration_backup migrate_up test_e2e_migration_rest
 
 test_e2e_teardown:
 	docker compose -p rss-bookmarkr -f docker-compose.e2e.yaml down
+
+test_unit_server:
+	dotnet run --project src/Server.Test

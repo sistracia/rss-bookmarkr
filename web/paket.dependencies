@@ -1,6 +1,10 @@
 source https://api.nuget.org/v3/index.json
 
 storage: none
+nuget Expecto
+nuget Expecto.BenchmarkDotNet
+nuget Expecto.FsCheck
+nuget Expecto.Hopac
 nuget Fable.Core
 nuget Fable.Elmish
 nuget Fable.Elmish.Browser
@@ -13,6 +17,8 @@ nuget Fable.Remoting.Giraffe
 nuget Feliz
 nuget Feliz.DaisyUI
 nuget MailKit
+nuget Microsoft.NET.Test.Sdk
 nuget Npgsql.FSharp
 nuget Saturn
 nuget System.ServiceModel.Syndication
+nuget YoloDev.Expecto.TestSdk

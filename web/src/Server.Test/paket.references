@@ -1,0 +1,6 @@
+Expecto
+Expecto.BenchmarkDotNet
+Expecto.FsCheck
+Expecto.Hopac
+Microsoft.NET.Test.Sdk
+YoloDev.Expecto.TestSdk

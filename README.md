@@ -120,7 +120,15 @@ docker run \
 rss-bookmarkr
 ```
 
-## Testing
+## Unit Testing
+
+Run unit test for `Server` project.
+
+```bash
+make test_unit_server
+```
+
+## E2E Testing
 
 Prepare the app in isolated Docker environment.
 
@@ -133,7 +141,7 @@ Wait until the app's container healthy, then run the migration.
 make test_e2e_migration
 ```
 
-Cleanup the app's container
+Cleanup the app's container.
 
 ```bash
 make test_e2e_teardown

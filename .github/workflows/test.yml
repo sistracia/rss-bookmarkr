@@ -33,8 +33,14 @@ jobs:
         name: Wait for the apps in docker healthy
         run: timeout 60s sh -c 'until docker ps | grep rss-bookmarkr-web | grep -q healthy; do echo "Waiting for container to be healthy..."; sleep 2; done'
       -
-        name: Restore dotnet tool
-        run: dotnet tool restore
+        name: Restore dotnet tool & dependency
+        run: |
+          dotnet tool restore
+          dotnet restore
+          dotnet paket restore
+      -
+        name: Run unit test for Server project
+        run: make test_unit_server
       -
         name: Migrate database schema
         run: | 
