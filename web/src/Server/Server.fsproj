@@ -8,7 +8,7 @@
     <Compile Include="Types.fs" />
     <Compile Include="Extensions.fs" />
     <Compile Include="Time.fs" />
-    <Compile Include="RSS.fs" />
+    <Compile Include="RSSFetcher.fs" />
     <Compile Include="DataAccess.fs" />
     <Compile Include="Mail.fs" />
     <Compile Include="RSSWorker.fs" />

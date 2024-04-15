@@ -20,17 +20,17 @@ type RSSProcessingService(connectionString: string, publicHost: string, mailServ
                 |> Array.map (fun (history: RSSHistory) ->
                     // Transform to async function that return tuple of url and RSS list
                     async {
-                        let! (remoteRSSList: RSS seq) = RSS.parseRSS history.Url
+                        let! (remoteRSSList: RSS seq) = RSSFetcher.parseRSS history.Url
                         return (history.Url, remoteRSSList)
                     })
                 |> Async.Parallel
         }
 
     /// New RSS determined by latest updated is higher compare to the stored one in database.
-    member __.FilterNewRemoteRSS (history: RSSHistory) (remoteRSS: RSS) : bool =
+    member private __.FilterNewRemoteRSS (history: RSSHistory) (remoteRSS: RSS) : bool =
         DateTime.Compare(remoteRSS.PublishDate, history.LatestUpdated) >= 0
 
-    member this.MapRSSHistoryWithRemote (remoteRSSListMap: Map<string, RSS seq>) (history: RSSHistory) =
+    member private this.MapRSSHistoryWithRemote (remoteRSSListMap: Map<string, RSS seq>) (history: RSSHistory) =
         remoteRSSListMap.Item history.Url
         |> Seq.filter (this.FilterNewRemoteRSS history)
 

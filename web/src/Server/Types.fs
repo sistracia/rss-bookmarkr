@@ -42,23 +42,9 @@ type User =
       Password: string
       Email: string option }
 
-type RSSUrl =
-    { Id: string
-      Url: string
-      UserId: string }
-
 type RSSHistory =
     { Url: string; LatestUpdated: DateTime }
 
 type RSSEmailsAggregate =
     { Email: string
       HistoryPairs: RSSHistory option array }
-
-type MailSettings() =
-    static member SettingName = "MailSettings"
-    member val Server: string = "" with get, set
-    member val Port: int = 0 with get, set
-    member val SenderName: string = "" with get, set
-    member val SenderEmail: string = "" with get, set
-    member val UserName: string = "" with get, set
-    member val Password: string = "" with get, set

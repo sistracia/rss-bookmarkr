@@ -101,18 +101,19 @@ let app =
         use_static "wwwroot"
 
         background_service (fun (serviceProvider: IServiceProvider) ->
-            let configuration = serviceProvider.GetService<IConfiguration>()
+            let configuration: IConfiguration = serviceProvider.GetService<IConfiguration>()
 
-            let logger = serviceProvider.GetService<ILogger<unit>>()
+            let logger: ILogger<unit> = serviceProvider.GetService<ILogger<unit>>()
 
-            let connectionString = (configuration.GetConnectionString rssDbConnectionStringKey)
+            let connectionString: string =
+                (configuration.GetConnectionString rssDbConnectionStringKey)
 
-            let mailSettings =
-                configuration.GetSection(MailSettings.SettingName).Get<MailSettings>()
+            let mailSettings: Mail.MailSettings =
+                configuration.GetSection(Mail.MailSettings.SettingName).Get<Mail.MailSettings>()
 
-            let mailService = Mail.MailService(mailSettings)
+            let mailService: Mail.MailService = Mail.MailService(mailSettings)
 
-            let rssProcessingService =
+            let rssProcessingService: RSSWorker.RSSProcessingService =
                 RSSWorker.RSSProcessingService(connectionString, publicHost, mailService)
 
             let minutesInMS = 1000 * 60

@@ -7,7 +7,7 @@ open Types
 
 let getRSSList (urls: string array) =
     async {
-        let! rssList = urls |> RSS.parseRSSList
+        let! rssList = urls |> RSSFetcher.parseRSSList
 
         return
             rssList

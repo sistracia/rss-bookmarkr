@@ -11,7 +11,8 @@ COPY .paket/ .
 
 COPY src/Client/*.fsproj src/Client/paket.references ./src/Client/
 COPY src/Server/*.fsproj src/Server/paket.references ./src/Server/
-COPY src/Shared/*.fsproj ./src/Shared/
+COPY src/Shared/*.fsproj src/Shared/paket.references ./src/Shared/
+COPY src/Server.Test/*.fsproj src/Server.Test/paket.references ./src/Server.Test/
 
 RUN dotnet tool restore
 RUN dotnet restore

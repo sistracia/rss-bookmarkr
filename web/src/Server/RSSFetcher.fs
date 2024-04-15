@@ -1,4 +1,4 @@
-module RSS
+module RSSFetcher
 
 open System.Xml
 open System.ServiceModel.Syndication
