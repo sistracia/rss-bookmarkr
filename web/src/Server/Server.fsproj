@@ -5,6 +5,18 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Types.fs" />
+    <Compile Include="Extensions.fs" />
+    <Compile Include="Time.fs" />
+    <Compile Include="RSS.fs" />
+    <Compile Include="DataAccess.fs" />
+    <Compile Include="Mail.fs" />
+    <Compile Include="RSSWorker.fs" />
+    <Compile Include="Worker.fs" />
+    <Compile Include="Views.fs" />
+    <Compile Include="Handler.fs" />
+    <Compile Include="ApiHandler.fs" />
+    <Compile Include="ViewHandler.fs" />
     <Compile Include="Server.fs" />
   </ItemGroup>
   <ItemGroup>
