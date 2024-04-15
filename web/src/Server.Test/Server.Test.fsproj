@@ -6,7 +6,7 @@
     <GenerateProgramFile>false</GenerateProgramFile>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Sample.fs" />
+    <Compile Include="RSSWorker.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
