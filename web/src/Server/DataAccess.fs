@@ -97,18 +97,16 @@ let aggreateRssEmails (cancellationToken: CancellationToken) (connectionString: 
     |> Sql.cancellationToken cancellationToken
     |> Sql.query
         """SELECT
-                        u.email,
-                        ARRAY_AGG(ru.url || '|' || rh.latest_updated) AS history_pairs
-                    FROM
-                        users u
-                    JOIN
-                        rss_urls ru ON u.id = ru.user_id 
-                    JOIN
-                        rss_histories rh ON ru .url = rh.url
-                    WHERE 
-                    	u.email <> ''
-                    GROUP BY
-                        u.email;"""
+                    COALESCE(u.email, '') as email,
+                    ARRAY_AGG(ru.url || '|' || rh.latest_updated) AS history_pairs
+                FROM
+                    users u
+                JOIN
+                    rss_urls ru ON u.id = ru.user_id 
+                JOIN
+                    rss_histories rh ON ru .url = rh.url
+                GROUP BY
+                    u.email;"""
     |> Sql.execute (fun read ->
         { RSSEmailsAggregate.Email = read.text "email"
           RSSEmailsAggregate.HistoryPairs =

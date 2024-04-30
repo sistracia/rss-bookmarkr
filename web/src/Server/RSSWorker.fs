@@ -102,6 +102,7 @@ type RSSProcessingService(connectionString: string, publicHost: string, mailServ
 
     member private this.ProceedSubscriber(rssAggregate: RSSEmailsAggregate) : Async<RSS array option> =
         async {
+            let email: string = rssAggregate.Email
             let rssHistories: RSSHistory array = rssAggregate.HistoryPairs |> Array.choose id
 
             let! (rssList: (string * RSS seq) array) = this.GetLatestRemoteRSS rssHistories
@@ -110,11 +111,18 @@ type RSSProcessingService(connectionString: string, publicHost: string, mailServ
 
             if (newRSS |> Seq.length) = 0 then
                 return None
+            else if email = "" then
+                return Some(this.LatestNewRSS newRSS)
             else
-                this.SendEmail
-                    (this.CreateEmailRecipient rssAggregate.Email)
-                    (this.CreateEmailHtmlBody flatNewRSS rssAggregate.Email)
-                    (this.CreateEmailTextBody flatNewRSS)
+                try
+                    this.SendEmail
+                        (this.CreateEmailRecipient email)
+                        (this.CreateEmailHtmlBody flatNewRSS email)
+                        (this.CreateEmailTextBody flatNewRSS)
+
+                // Ignore if there is an error when sending email because invalid email or etc
+                with _ ->
+                    ()
 
                 return Some(this.LatestNewRSS newRSS)
         }
