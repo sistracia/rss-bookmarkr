@@ -40,7 +40,7 @@ type User =
     { Id: string
       Username: string
       Password: string
-      Email: string option }
+      Email: string }
 
 type RSSHistory =
     { Url: string; LatestUpdated: DateTime }

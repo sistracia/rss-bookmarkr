@@ -7,20 +7,20 @@ open Npgsql.FSharp
 open Shared
 open Types
 
-let getUser (connectionString: string) (loginForm: LoginForm) =
+let getUser (connectionString: string) (loginForm: LoginForm) : User option =
     connectionString
     |> Sql.connect
-    |> Sql.query "SELECT id, username, password, email FROM users WHERE username = @username"
+    |> Sql.query "SELECT id, username, password, COALESCE(email, '') as email FROM users WHERE username = @username"
     |> Sql.parameters [ "@username", Sql.string loginForm.Username ]
-    |> Sql.execute (fun read ->
+    |> Sql.execute (fun (read: RowReader) ->
         { User.Id = read.string "id"
           User.Username = read.text "username"
           User.Password = read.text "password"
-          User.Email = read.textOrNone "email" })
+          User.Email = read.text "email" })
     |> List.tryHead
 
-let insertUser (connectionString: string) (loginForm: LoginForm) =
-    let newUid = Guid.NewGuid().ToString()
+let insertUser (connectionString: string) (loginForm: LoginForm) : string =
+    let newUid: string = Guid.NewGuid().ToString()
 
     connectionString
     |> Sql.connect
@@ -34,7 +34,7 @@ let insertUser (connectionString: string) (loginForm: LoginForm) =
 
     newUid
 
-let getRSSUrls (connectionString: string) (userId: string) =
+let getRSSUrls (connectionString: string) (userId: string) : string list =
     connectionString
     |> Sql.connect
     |> Sql.query "SELECT url FROM rss_urls WHERE user_id = @user_id"
@@ -54,7 +54,7 @@ let insertUrls (connectionString: string) (userId: string) (urls: string array) 
                       "@user_id", Sql.text userId ]) ] ]
     |> ignore
 
-let deleteUrls (connectionString: string) (userId: string) (urls: string array) =
+let deleteUrls (connectionString: string) (userId: string) (urls: string array) : unit =
     connectionString
     |> Sql.connect
     |> Sql.query "DELETE FROM rss_urls WHERE user_id = @user_id AND url = ANY(@urls)"
@@ -62,7 +62,7 @@ let deleteUrls (connectionString: string) (userId: string) (urls: string array) 
     |> Sql.executeNonQuery
     |> ignore
 
-let insertSession (connectionString: string) (userId: string) (sessionId: string) =
+let insertSession (connectionString: string) (userId: string) (sessionId: string) : unit =
     connectionString
     |> Sql.connect
     |> Sql.query "INSERT INTO sessions (id, user_id) VALUES (@id, @user_id)"
@@ -70,7 +70,7 @@ let insertSession (connectionString: string) (userId: string) (sessionId: string
     |> Sql.executeNonQuery
     |> ignore
 
-let getUserSession (connectionString: string) (sessionId: string) =
+let getUserSession (connectionString: string) (sessionId: string) : User option =
     connectionString
     |> Sql.connect
     |> Sql.query
@@ -78,17 +78,17 @@ let getUserSession (connectionString: string) (sessionId: string) =
                         u.id AS user_id,
                         u.username AS user_username,
                         u.password AS user_password,
-                        u.email AS user_email
+                        COALESCE(u.email, '') as user_email
                     FROM users u
                     LEFT JOIN sessions s
                         ON s.user_id = u.id
                     WHERE s.id = @session_id"""
     |> Sql.parameters [ "@session_id", Sql.string sessionId ]
-    |> Sql.execute (fun read ->
+    |> Sql.execute (fun (read: RowReader) ->
         { User.Id = read.string "user_id"
           User.Username = read.text "user_username"
           User.Password = read.text "user_password"
-          User.Email = read.textOrNone "user_email" })
+          User.Email = read.text "user_email" })
     |> List.tryHead
 
 let aggreateRssEmails (cancellationToken: CancellationToken) (connectionString: string) =
@@ -119,7 +119,7 @@ let aggreateRssEmails (cancellationToken: CancellationToken) (connectionString: 
                           RSSHistory.LatestUpdated = DateTime.Parse latestUpdated }
                 | _ -> None) })
 
-let unsetUserEmail (connectionString: string) (email: string) =
+let unsetUserEmail (connectionString: string) (email: string) : unit =
     connectionString
     |> Sql.connect
     |> Sql.query "UPDATE users SET email = NULL WHERE email = @email"
@@ -127,7 +127,7 @@ let unsetUserEmail (connectionString: string) (email: string) =
     |> Sql.executeNonQuery
     |> ignore
 
-let setUserEmail (connectionString: string) (userId: string, email: string) (newRSSHistories: RSSHistory seq) =
+let setUserEmail (connectionString: string) (userId: string, email: string) (newRSSHistories: RSSHistory seq) : unit =
     connectionString
     |> Sql.connect
     |> Sql.executeTransaction
@@ -148,7 +148,7 @@ let renewRSSHistories
     (cancellationToken: CancellationToken)
     (connectionString: string)
     (newRSSHistories: RSSHistory seq)
-    =
+    : unit =
     connectionString
     |> Sql.connect
     |> Sql.cancellationToken cancellationToken

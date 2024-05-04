@@ -127,7 +127,7 @@ type LoginResult =
     { UserId: string
       RssUrls: string array
       SessionId: string
-      Email: string option }
+      Email: string }
 
 [<Struct>]
 type LoginError = { Message: string }

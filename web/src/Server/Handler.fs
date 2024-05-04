@@ -5,9 +5,9 @@ open System
 open Shared
 open Types
 
-let getRSSList (urls: string array) =
+let getRSSList (urls: string array): RSS seq Async =
     async {
-        let! rssList = urls |> RSSFetcher.parseRSSList
+        let! (rssList: RSS seq array) = urls |> RSSFetcher.parseRSSList
 
         return
             rssList
@@ -16,19 +16,19 @@ let getRSSList (urls: string array) =
     }
 
 let register (connectionString: string) (sessionId: string) (loginForm: LoginForm) : LoginResponse =
-    let userId = (DataAccess.insertUser connectionString loginForm)
+    let userId: string = (DataAccess.insertUser connectionString loginForm)
 
-    let loginResult =
+    let loginResult: LoginResult =
         { LoginResult.UserId = userId
           LoginResult.RssUrls = Array.empty
           LoginResult.SessionId = sessionId
-          LoginResult.Email = None }
+          LoginResult.Email = "" }
 
     Success loginResult
 
 let login (connectionString: string) (sessionId: string) (loginForm: LoginForm) (user: User) : LoginResponse =
     if user.Password = loginForm.Password then
-        let loginResult =
+        let loginResult: LoginResult =
             { LoginResult.UserId = user.Id
               LoginResult.RssUrls = (DataAccess.getRSSUrls connectionString user.Id) |> List.toArray
               LoginResult.SessionId = sessionId
@@ -36,17 +36,17 @@ let login (connectionString: string) (sessionId: string) (loginForm: LoginForm) 
 
         Success loginResult
     else
-        let loginError = { LoginError.Message = "Password not match." }
+        let loginError: LoginError = { LoginError.Message = "Password not match." }
         Failed loginError
 
 let loginOrRegister (connectionString: string) (loginForm: LoginForm) : LoginResponse Async =
     async {
-        let sessionId = Guid.NewGuid().ToString()
+        let sessionId: string = Guid.NewGuid().ToString()
 
-        let loginResponse =
+        let loginResponse: LoginResponse =
             match DataAccess.getUser connectionString loginForm with
             | None -> register connectionString sessionId loginForm
-            | Some user -> login connectionString sessionId loginForm user
+            | Some (user: User) -> login connectionString sessionId loginForm user
 
         match loginResponse with
         | Success(user: LoginResult) -> DataAccess.insertSession connectionString user.UserId sessionId
@@ -57,16 +57,16 @@ let loginOrRegister (connectionString: string) (loginForm: LoginForm) : LoginRes
 
 let saveRSSUrls (connectionString: string) (saveRSSUrlReq: SaveRSSUrlReq) : unit Async =
     async {
-        let existingUrls =
+        let existingUrls: string array =
             (DataAccess.getRSSUrls connectionString saveRSSUrlReq.UserId) |> List.toArray
 
-        let newUrls =
+        let newUrls: string array =
             saveRSSUrlReq.Urls
-            |> Array.filter (fun url -> not <| Array.contains url existingUrls)
+            |> Array.filter (fun (url: string) -> not <| Array.contains url existingUrls)
 
-        let deletedUrls =
+        let deletedUrls: string array =
             existingUrls
-            |> Array.filter (fun url -> not <| Array.contains url saveRSSUrlReq.Urls)
+            |> Array.filter (fun (url: string) -> not <| Array.contains url saveRSSUrlReq.Urls)
 
         if newUrls.Length <> 0 then
             DataAccess.insertUrls connectionString saveRSSUrlReq.UserId newUrls
@@ -82,10 +82,10 @@ let initLogin (connectionString: string) (initLoginReq: InitLoginReq) : LoginRes
             |> DataAccess.getUserSession connectionString
             |> (function
             | None ->
-                let loginError = { LoginError.Message = "Session invalid." }
+                let loginError: LoginError = { LoginError.Message = "Session invalid." }
                 Failed loginError
             | Some(user: User) ->
-                let loginResult =
+                let loginResult: LoginResult =
                     { LoginResult.UserId = user.Id
                       LoginResult.RssUrls = (DataAccess.getRSSUrls connectionString user.Id) |> List.toArray
                       LoginResult.SessionId = initLoginReq.SessionId

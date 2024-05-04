@@ -129,6 +129,7 @@ export class RSSBokmarkrPage {
         await this.unsubscribeButton.click();
       },
     });
+    await expect(this.unsubscribeButton).not.toBeAttached();
   }
 
   async login(username: string, password: string) {

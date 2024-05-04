@@ -19,12 +19,12 @@ open Elmish.HMR
 type User =
     { UserId: string
       SessionId: string
-      Email: string option }
+      Email: string }
 
 
 /// Copy from https://github.com/Dzoukr/Yobo/blob/master/src/Yobo.Client/TokenStorage.fs
 module Session =
-    let sessionKey = "session_id"
+    let sessionKey: string = "session_id"
 
     let tryGetSessionId () : string option =
         Browser.WebStorage.localStorage.getItem (sessionKey)
@@ -43,7 +43,7 @@ module Session =
             Browser.WebStorage.localStorage.setItem (sessionKey, sessionId)
 
 module RPC =
-    let store =
+    let store: IRPCStore =
         Remoting.createApi ()
         |> Remoting.withRouteBuilder Route.routeBuilder
         |> Remoting.buildProxy<IRPCStore>
@@ -123,7 +123,7 @@ module RSS =
         | OnUnsubscribe of unit
         | SubscriptionChange of email: string
 
-    let init () =
+    let init () : State * Cmd<Msg> =
         let initialState =
             { State.Urls = Array.empty
               State.Url = ""
@@ -137,38 +137,38 @@ module RSS =
     let update (user: User option) (msg: Msg) (state: State) : State * Cmd<Msg> =
         match msg with
         | SetUrl(url: string) ->
-            let nextState = { state with Url = url }
+            let nextState: State = { state with Url = url }
             nextState, Cmd.none
         | AddUrl ->
-            let url = state.Url
-            let isUrlExists = state.Urls |> Array.exists (fun elm -> elm = url)
+            let url: string = state.Url
+            let isUrlExists: bool = state.Urls |> Array.exists (fun elm -> elm = url)
 
             if url <> "" && not isUrlExists then
-                let newUrls = [| url |]
-                let newUrlsState = Array.append state.Urls newUrls
+                let newUrls: string array = [| url |]
+                let newUrlsState: string array = Array.append state.Urls newUrls
 
-                let nextState =
+                let nextState: State =
                     { state with
                         Url = ""
                         Urls = newUrlsState }
 
-                let nextCmd =
+                let nextCmd: Cmd<Msg> =
                     Cmd.batch
                         [ newUrlsState |> Search.generateUrlSearch |> Navigation.newUrl
                           newUrls |> GetRSSList |> Cmd.ofMsg ]
 
                 nextState, nextCmd
             else
-                let nextState = { state with Url = "" }
+                let nextState: State = { state with Url = "" }
                 nextState, Cmd.none
         | SetUrls(urls: string array) ->
-            let nextState =
+            let nextState: State =
                 { state with
                     Url = ""
                     Urls = urls
                     RSSList = Seq.empty }
 
-            let nextCmd =
+            let nextCmd: Cmd<Msg> =
                 match urls with
                 | [||] -> Cmd.none
                 | _ ->
@@ -178,9 +178,9 @@ module RSS =
 
             nextState, nextCmd
         | RemoveUrl(url: string) ->
-            let newUrls = state.Urls |> Array.filter (fun elm -> elm <> url)
+            let newUrls: string array = state.Urls |> Array.filter (fun elm -> elm <> url)
 
-            let newRSSList =
+            let newRSSList: RSS seq =
                 state.RSSList
                 |> Seq.filter (fun (rss: RSS) -> newUrls |> Array.exists (fun (newUrl: string) -> newUrl = rss.Origin))
 
@@ -198,9 +198,9 @@ module RSS =
                 Cmd.OfAsync.attempt RPC.saveRSSUrlssss (user.UserId, state.Urls) ofError
             | None -> Cmd.none
         | GetRSSList(urls: string array) ->
-            let nextState = { state with ServerState = Loading }
+            let nextState: State = { state with ServerState = Loading }
             let ofError = fun (ex: exn) -> Some ex.Message |> SetError
-            let nextCmd = Cmd.OfAsync.either RPC.getRSSList urls GotRSSList ofError
+            let nextCmd: Cmd<Msg> = Cmd.OfAsync.either RPC.getRSSList urls GotRSSList ofError
             nextState, nextCmd
         | GotRSSList(rssList: RSS seq) ->
             { state with
@@ -208,13 +208,13 @@ module RSS =
                 RSSList = [ rssList; state.RSSList ] |> Seq.concat |> Seq.sortByDescending _.PublishDate },
             Cmd.none
         | ChangeEmail(email: string) ->
-            let nextState = { state with Email = email }
+            let nextState: State = { state with Email = email }
             nextState, Cmd.none
         | Subscribe(userId: string) ->
             let ofError = fun (ex: exn) -> Some ex.Message |> SetError
             state, Cmd.OfAsync.either RPC.subscribe (userId, state.Email) OnSubscribed ofError
         | OnSubscribed() ->
-            let nextState = { state with Email = "" }
+            let nextState: State = { state with Email = "" }
             nextState, SubscriptionChange state.Email |> Cmd.ofMsg
         | Unsubscribe(email: string) ->
             let ofError = fun (ex: exn) -> Some ex.Message |> SetError
@@ -222,7 +222,7 @@ module RSS =
         | OnUnsubscribe() -> state, SubscriptionChange "" |> Cmd.ofMsg
         | SubscriptionChange(_: string) -> state, Cmd.none
         | SetError(error: string option) ->
-            let nextState = { state with Error = error }
+            let nextState: State = { state with Error = error }
             nextState, Cmd.none
 
     let render (user: User option) (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
@@ -281,12 +281,7 @@ module RSS =
                                         | None -> ()
                                         | Some(user: User) ->
                                             match user.Email with
-                                            | Some(email: string) ->
-                                                Daisy.button.button
-                                                    [ button.link
-                                                      prop.onClick (fun _ -> dispatch (Unsubscribe email))
-                                                      prop.text "Unsubscribe" ]
-                                            | None ->
+                                            | "" ->
                                                 React.fragment
                                                     [ Daisy.button.label
                                                           [ button.link
@@ -336,7 +331,12 @@ module RSS =
                                                                                                     dispatch (
                                                                                                         Subscribe
                                                                                                             user.UserId
-                                                                                                    )) ] ] ] ] ] ] ] ] ] ]
+                                                                                                    )) ] ] ] ] ] ] ] ]
+                                            | (email: string) ->
+                                                Daisy.button.button
+                                                    [ button.link
+                                                      prop.onClick (fun _ -> dispatch (Unsubscribe email))
+                                                      prop.text "Unsubscribe" ] ] ]
 
                         Component.renderError state.Error
 
@@ -391,20 +391,20 @@ module Auth =
     let update (msg: Msg) (state: State) : State * Cmd<Msg> =
         match msg with
         | ChangeUsername(username: string) ->
-            let nextState = { state with InputUsername = username }
+            let nextState: State = { state with InputUsername = username }
             nextState, Cmd.none
         | ChangePassword(password: string) ->
-            let nextState = { state with InputPassword = password }
+            let nextState: State = { state with InputPassword = password }
             nextState, Cmd.none
         | Login ->
-            let isFormFilled = state.InputUsername <> "" && state.InputPassword <> ""
+            let isFormFilled: bool = state.InputUsername <> "" && state.InputPassword <> ""
 
             if not isFormFilled then
                 state, Cmd.none
             else
-                let nextState = { state with LoggingIn = true }
+                let nextState: State = { state with LoggingIn = true }
 
-                let credentials =
+                let credentials: LoginForm =
                     { LoginForm.Username = state.InputUsername
                       LoginForm.Password = state.InputPassword }
 
@@ -419,7 +419,7 @@ module Auth =
         | InitUser ->
             match Session.tryGetSessionId () with
             | None -> state, Cmd.none
-            | Some sessionId ->
+            | Some(sessionId: string) ->
                 let ofSuccess =
                     function
                     | Success(loginResult: LoginResult) -> Some loginResult |> LoginSuccess
@@ -428,7 +428,7 @@ module Auth =
                 let ofError = (fun (ex: exn) -> Some ex.Message |> SetError)
                 state, Cmd.OfAsync.either RPC.initLogin sessionId ofSuccess ofError
         | SetError(error: string option) ->
-            let nextState =
+            let nextState: State =
                 { state with
                     LoggingIn = false
                     Error = error }
@@ -510,36 +510,36 @@ type Msg =
 
 type BrowserRoute = Search of string option
 
-let initUrlCmd (urls: string array) =
+let initUrlCmd (urls: string array) : Cmd<Msg> =
     urls |> RSS.Msg.SetUrls |> RSSMsg |> Cmd.ofMsg
 
 let route = oneOf [ map Search (top <?> stringParam "url") ]
 
-let urlUpdate (_: BrowserRoute option) (state: State) = state, Cmd.none
+let urlUpdate (_: BrowserRoute option) (state: State) : State * Cmd<Msg> = state, Cmd.none
 
-let urlInit (route: BrowserRoute option) (state: State) =
+let urlInit (route: BrowserRoute option) (state: State) : State * Cmd<Msg> =
     state,
     match route with
     | Some(Search(query: string option)) ->
         match query with
-        | Some query -> query.Split [| ',' |] |> Array.distinct
+        | Some(query: string) -> query.Split [| ',' |] |> Array.distinct
         | None -> [||]
     | None -> [||]
     |> initUrlCmd
 
 
-let init (route: BrowserRoute option) =
-    let rssState, rssCmd = RSS.init ()
-    let authState, authCmd = Auth.init ()
+let init (route: BrowserRoute option) : State * Cmd<Msg> =
+    let (rssState: RSS.State), (rssCmd: Cmd<RSS.Msg>) = RSS.init ()
+    let (authState: Auth.State), (authCmd: Cmd<Auth.Msg>) = Auth.init ()
 
-    let initialState =
+    let initialState: State =
         { User = None
           RSS = rssState
           Auth = authState }
 
-    let _initialState, initalCmd = urlInit route initialState
+    let (_initialState: State), (initalCmd: Cmd<Msg>) = urlInit route initialState
 
-    let _initialCmd =
+    let _initialCmd: Cmd<Msg> =
         Cmd.batch [ Cmd.map RSSMsg rssCmd; Cmd.map AuthMsg authCmd; initalCmd ]
 
     _initialState, _initialCmd
@@ -549,18 +549,20 @@ let update (msg: Msg) (state: State) : State * Cmd<Msg> =
     | RSSMsg(rssMsg: RSS.Msg) ->
         match rssMsg with
         | RSS.SubscriptionChange(email: string) ->
-            let user =
+            let user: User option =
                 match state.User with
                 | None -> state.User
                 | Some(user: User) ->
-                    let newUser: User = { user with Email = Some email }
+                    let newUser: User = { user with Email = email }
                     Some newUser
 
-            let nextState = { state with User = user }
+            let nextState: State = { state with User = user }
             nextState, Cmd.none
         | _ ->
-            let nextRSSState, nextRSSCmd = RSS.update state.User rssMsg state.RSS
-            let nextState = { state with RSS = nextRSSState }
+            let (nextRSSState: RSS.State), (nextRSSCmd: Cmd<RSS.Msg>) =
+                RSS.update state.User rssMsg state.RSS
+
+            let nextState: State = { state with RSS = nextRSSState }
             nextState, Cmd.map RSSMsg nextRSSCmd
     | AuthMsg(authMsg: Auth.Msg) ->
         match authMsg with
@@ -569,14 +571,14 @@ let update (msg: Msg) (state: State) : State * Cmd<Msg> =
             | Some(loginResult: LoginResult) ->
                 Session.setSessionId loginResult.SessionId
 
-                let authState, _ = Auth.init ()
+                let (authState: Auth.State), _ = Auth.init ()
 
-                let user =
+                let user: User =
                     { User.SessionId = loginResult.SessionId
                       User.UserId = loginResult.UserId
                       User.Email = loginResult.Email }
 
-                let nextState =
+                let nextState: State =
                     { state with
                         Auth = authState
                         State.User = Some user }
@@ -587,17 +589,17 @@ let update (msg: Msg) (state: State) : State * Cmd<Msg> =
             | None -> state, Cmd.none
         | Auth.Logout ->
             Session.removeSessionId ()
-            let authState, _ = Auth.init ()
+            let (authState: Auth.State), _ = Auth.init ()
 
-            let nextState =
+            let nextState: State =
                 { state with
                     State.Auth = authState
                     State.User = None }
 
             nextState, Cmd.none
         | _ ->
-            let nextAuthState, nextAuthCmd = Auth.update authMsg state.Auth
-            let nextState = { state with Auth = nextAuthState }
+            let (nextAuthState: Auth.State), nextAuthCmd = Auth.update authMsg state.Auth
+            let nextState: State = { state with Auth = nextAuthState }
             nextState, Cmd.map AuthMsg nextAuthCmd
 
 let render (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =

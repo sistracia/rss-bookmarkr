@@ -30,13 +30,13 @@ type ApplicationBuilder with
 
     /// Custom keyword to more easily add a background worker to ASP .NET
     [<CustomOperation "background_service">]
-    member _.BackgroundService(state: ApplicationState, serviceBuilder: Func<IServiceProvider, 'a>) =
+    member _.BackgroundService(state: ApplicationState, serviceBuilder: Func<IServiceProvider, 'a>) : ApplicationState =
         { state with
             ServicesConfig =
                 (fun (svcCollection: IServiceCollection) -> svcCollection.AddHostedService serviceBuilder)
                 :: state.ServicesConfig }
 
-    member this.BackgroundService(state: ApplicationState, backgroundSvc) =
+    member this.BackgroundService(state: ApplicationState, backgroundSvc) : ApplicationState =
         let worker (serviceProvider: IServiceProvider) =
             { new BackgroundService() with
                 member _.ExecuteAsync(cancellationToken: Threading.CancellationToken) =
@@ -46,7 +46,7 @@ type ApplicationBuilder with
 
 let publicHost: string = Environment.GetEnvironmentVariable "PUBLIC_HOST"
 
-let rpcStore (ctx: HttpContext) =
+let rpcStore (ctx: HttpContext) : IRPCStore =
     { IRPCStore.getRSSList = Handler.getRSSList
       IRPCStore.loginOrRegister = (Handler.loginOrRegister ctx.RssDbConnectionString)
       IRPCStore.saveRSSUrls = (Handler.saveRSSUrls ctx.RssDbConnectionString)
@@ -61,7 +61,7 @@ let webApp =
     |> Remoting.buildHttpHandler
 
 module Router =
-    let apiRouter =
+    let apiRouter: HttpHandler =
         router {
             get "/rss" (tryBindQuery<RSSQueryString> RequestErrors.BAD_REQUEST None (ApiHandler.rssListAction))
 
@@ -86,7 +86,7 @@ module Router =
                 (tryBindJson<UnsubscribeReq> RequestErrors.BAD_REQUEST (validateModel ApiHandler.unsubscribeAction))
         }
 
-    let defaultView =
+    let defaultView: HttpHandler =
         router {
             forward "" webApp
             forward "/api" apiRouter
@@ -96,7 +96,7 @@ module Router =
                 (tryBindQuery<UnsubscribeQueryString> RequestErrors.BAD_REQUEST None (ViewHandler.unsubsribePageAction))
         }
 
-let app =
+let app: IHostBuilder =
     application {
         use_static "wwwroot"
 
@@ -116,7 +116,7 @@ let app =
             let rssProcessingService: RSSWorker.RSSProcessingService =
                 RSSWorker.RSSProcessingService(connectionString, publicHost, mailService)
 
-            let minutesInMS = 1000 * 60
+            let minutesInMS: int = 1000 * 60
 
             new Worker.SendEmailSubscription(minutesInMS, rssProcessingService, logger))
 
