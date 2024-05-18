@@ -53,12 +53,6 @@ type RSSProcessingService(connectionString: string, publicHost: string, mailServ
             | _ -> None)
         |> Array.map (fun (rss: RSS) -> rss)
 
-    member private __.CreateRSSHistories(remoteRSSList: RSS array) =
-        remoteRSSList
-        |> Array.map (fun (remoteRSS: RSS) ->
-            { RSSHistory.Url = remoteRSS.Origin
-              RSSHistory.LatestUpdated = DateTime.Now })
-
     member private __.CreateEmailRecipient(recipient: string) : Mail.MailRecipient =
         { Mail.MailRecipient.EmailToId = recipient
           Mail.MailRecipient.EmailToName =
@@ -100,7 +94,7 @@ type RSSProcessingService(connectionString: string, publicHost: string, mailServ
 
         mailService.SendMail mailData
 
-    member private this.ProceedSubscriber(rssAggregate: RSSEmailsAggregate) : Async<RSS array option> =
+    member private this.ProceedSubscriber(rssAggregate: RSSEmailsAggregate) : Async<(string * RSS seq) option> =
         async {
             let email: string = rssAggregate.Email
             let rssHistories: RSSHistory array = rssAggregate.HistoryPairs |> Array.choose id
@@ -109,11 +103,7 @@ type RSSProcessingService(connectionString: string, publicHost: string, mailServ
             let newRSS: RSS seq array = this.FilterNewRSS rssHistories rssList
             let flatNewRSS: RSS seq = this.FlattenNewRSS newRSS
 
-            if (newRSS |> Seq.length) = 0 then
-                return None
-            else if email = "" then
-                return Some(this.LatestNewRSS newRSS)
-            else
+            if (newRSS |> Seq.length) <> 0 && email <> "" then
                 try
                     this.SendEmail
                         (this.CreateEmailRecipient email)
@@ -124,31 +114,25 @@ type RSSProcessingService(connectionString: string, publicHost: string, mailServ
                 with _ ->
                     ()
 
-                return Some(this.LatestNewRSS newRSS)
+                return Some(rssAggregate.UserId, (this.LatestNewRSS newRSS))
+            else
+                return None
         }
-
-    member this.NewRSSHistories(newRSSList: RSS array option array) : RSSHistory array =
-        newRSSList
-        |> Array.choose id // Remove `option` from `RSS array option array`
-        |> Array.fold (fun (acc: RSS array) (elem: RSS array) -> Array.concat [ acc; elem ]) [||] // Flatten the RSS list
-        |> Array.map (fun (rss: RSS) -> (rss.Origin, rss)) // Transform to key-value pair to be able convert to Map
-        |> Map.ofArray // Convert to Map to remove duplicate item
-        |> Map.toArray // Convert back to list
-        |> Array.map (fun (_, rss: RSS) -> rss) // Get only the value
-        |> (this.CreateRSSHistories) // Map `RSS` to `RSSHistory`
 
     interface IRSSProcessingService with
 
         member this.DoWork(stoppingToken: CancellationToken) =
             task {
-
-                let! (newRSSList: RSS array option array) =
+                let! (newRSSList: (string * RSS seq) option array) =
                     DataAccess.aggreateRssEmails stoppingToken connectionString
                     |> List.map (this.ProceedSubscriber)
                     |> Async.Parallel
 
-
                 newRSSList
-                |> this.NewRSSHistories
-                |> DataAccess.renewRSSHistories stoppingToken connectionString // Save to DB
+                |> Array.choose id
+                |> Array.iter (fun (newRSS: (string * RSS seq)) ->
+                    snd newRSS
+                    |> Seq.map _.Origin
+                    |> Seq.toArray
+                    |> DataAccess.insertUrlsWithCancellation stoppingToken connectionString (fst newRSS))
             }

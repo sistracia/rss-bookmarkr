@@ -41,17 +41,32 @@ let getRSSUrls (connectionString: string) (userId: string) : string list =
     |> Sql.parameters [ "@user_id", Sql.string userId ]
     |> Sql.execute (fun read -> read.text "url")
 
-let insertUrls (connectionString: string) (userId: string) (urls: string array) =
-    connectionString
-    |> Sql.connect
+let insertUrlsQuery (userId: string) (urls: string array) (sql: Sql.SqlProps) =
+    sql
     |> Sql.executeTransaction
-        [ "INSERT INTO rss_urls (id, url, user_id) VALUES (@id, @url, @user_id)",
+        [ """INSERT INTO rss_urls (id, url, user_id) 
+               VALUES (@id, @url, @user_id) 
+               ON CONFLICT (url, user_id) DO UPDATE SET latest_updated = current_timestamp""",
           [ yield!
                 urls
                 |> Array.map (fun (url: string) ->
                     [ "@id", Sql.text (Guid.NewGuid().ToString())
                       "@url", Sql.text url
                       "@user_id", Sql.text userId ]) ] ]
+
+let insertUrls (connectionString: string) (userId: string) (urls: string array) =
+    connectionString |> Sql.connect |> insertUrlsQuery userId urls |> ignore
+
+let insertUrlsWithCancellation
+    (cancellationToken: CancellationToken)
+    (connectionString: string)
+    (userId: string)
+    (urls: string array)
+    =
+    connectionString
+    |> Sql.connect
+    |> Sql.cancellationToken cancellationToken
+    |> insertUrlsQuery userId urls
     |> ignore
 
 let deleteUrls (connectionString: string) (userId: string) (urls: string array) : unit =
@@ -97,18 +112,18 @@ let aggreateRssEmails (cancellationToken: CancellationToken) (connectionString: 
     |> Sql.cancellationToken cancellationToken
     |> Sql.query
         """SELECT
+                    u.id as user_id,
                     COALESCE(u.email, '') as email,
-                    ARRAY_AGG(ru.url || '|' || rh.latest_updated) AS history_pairs
+                    ARRAY_AGG(ru.url || '|' || ru.latest_updated) AS history_pairs
                 FROM
                     users u
                 JOIN
                     rss_urls ru ON u.id = ru.user_id 
-                JOIN
-                    rss_histories rh ON ru .url = rh.url
                 GROUP BY
-                    u.email;"""
+                    u.id"""
     |> Sql.execute (fun read ->
-        { RSSEmailsAggregate.Email = read.text "email"
+        { RSSEmailsAggregate.UserId = read.text "user_id"
+          RSSEmailsAggregate.Email = read.text "email"
           RSSEmailsAggregate.HistoryPairs =
             (read.stringArray "history_pairs")
             |> Array.map (fun (pair: string) ->
@@ -130,38 +145,6 @@ let unsetUserEmail (connectionString: string) (email: string) : unit =
 let setUserEmail (connectionString: string) (userId: string, email: string) (newRSSHistories: RSSHistory seq) : unit =
     connectionString
     |> Sql.connect
-    |> Sql.executeTransaction
-        [ "UPDATE users SET email = @email WHERE id = @id", [ [ "@id", Sql.text userId; "@email", Sql.text email ] ]
-          """INSERT INTO rss_histories (id, url, latest_updated) 
-                            VALUES (@id, @url, @latest_updated)
-                            ON CONFLICT (url) DO NOTHING""",
-          [ yield!
-                newRSSHistories
-                |> Seq.map (fun (rss: RSSHistory) ->
-                    [ "@id", Sql.text (Guid.NewGuid().ToString())
-                      "@url", Sql.text rss.Url
-                      "@latest_updated", Sql.date rss.LatestUpdated ]) ] ]
-    |> ignore
-
-// Upsert the RSS histories
-let renewRSSHistories
-    (cancellationToken: CancellationToken)
-    (connectionString: string)
-    (newRSSHistories: RSSHistory seq)
-    : unit =
-    connectionString
-    |> Sql.connect
-    |> Sql.cancellationToken cancellationToken
-    |> Sql.executeTransaction
-        [ """INSERT INTO rss_histories (id, url, latest_updated) 
-                            VALUES (@id, @url, @latest_updated)
-                            ON CONFLICT (url)
-                                DO UPDATE 
-                                    SET latest_updated=EXCLUDED.latest_updated""",
-          [ yield!
-                newRSSHistories
-                |> Seq.map (fun (rss: RSSHistory) ->
-                    [ "@id", Sql.text (Guid.NewGuid().ToString())
-                      "@url", Sql.text rss.Url
-                      "@latest_updated", Sql.date rss.LatestUpdated ]) ] ]
+    |> Sql.query "UPDATE users SET email = @email WHERE id = @id"
+    |> Sql.parameters [ "@id", Sql.text userId; "@email", Sql.text email ]
     |> ignore

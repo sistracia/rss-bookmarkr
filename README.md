@@ -141,6 +141,12 @@ Wait until the app's container healthy, then run the migration.
 make test_e2e_migration
 ```
 
+Run E2E testing.
+
+```bash
+bun run test
+```
+
 Cleanup the app's container.
 
 ```bash

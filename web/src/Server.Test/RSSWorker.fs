@@ -205,38 +205,4 @@ let rssWorkerTests =
 
                     )
 
-                    "NewRSSHistories > should be pick only head item in inner list of 2D list of remote RSS",
-                    (fun (rssProcessingService: RSSWorker.RSSProcessingService) ->
-                        let overreactedRSS: RSS array option =
-                            Some [| (generateRemoteRSS Day.Yesterday) overreadtedURL |]
-
-                        let infoqRSS: RSS array option = Some [| (generateRemoteRSS Day.Today) infoqURL |]
-
-                        let stackoveflowRSS: RSS array option =
-                            Some [| (generateRemoteRSS Day.Tomorrow) stackoverflowURL |]
-
-                        let input: RSS array option array = [| overreactedRSS; infoqRSS; stackoveflowRSS |]
-
-                        let expected: RSSHistory array =
-                            [| (generateHistoryRSS Day.Today) infoqURL
-                               (generateHistoryRSS Day.Yesterday) overreadtedURL
-                               (generateHistoryRSS Day.Tomorrow) stackoverflowURL |]
-
-                        let actual: RSSHistory array = rssProcessingService.NewRSSHistories input
-
-                        Expect.isNonEmpty actual "Actual not empty"
-
-                        Expect.equal (actual.Length) (expected.Length) "Actual length should be match expected length"
-
-                        for i in 0 .. (actual.Length) - 1 do
-                            let actualItem = actual[i]
-                            let expectedItem = expected[i]
-
-                            Expect.equal
-                                actualItem.Url
-                                expectedItem.Url
-                                (sprintf "Index-%d actual and expected url is equal" i)
-
-                    )
-
                     ] ]

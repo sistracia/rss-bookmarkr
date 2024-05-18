@@ -46,5 +46,6 @@ type RSSHistory =
     { Url: string; LatestUpdated: DateTime }
 
 type RSSEmailsAggregate =
-    { Email: string
+    { UserId: string
+      Email: string
       HistoryPairs: RSSHistory option array }
