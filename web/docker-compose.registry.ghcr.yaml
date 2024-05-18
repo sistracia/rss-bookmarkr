@@ -1,6 +1,6 @@
 services:
   web:
-    image: ghcr.io/sistracia/rss-bookmarkr:main
+    image: ghcr.io/sistracia/rss-bookmarkr:latest
     container_name: rss-bookmarkr
     restart: unless-stopped
     network_mode: "host"
