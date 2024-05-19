@@ -5,7 +5,7 @@ open System
 open Shared
 open Types
 
-let getRSSList (urls: string array): RSS seq Async =
+let getRSSList (urls: string array) : RSS seq Async =
     async {
         let! (rssList: RSS seq array) = urls |> RSSFetcher.parseRSSList
 
@@ -46,7 +46,7 @@ let loginOrRegister (connectionString: string) (loginForm: LoginForm) : LoginRes
         let loginResponse: LoginResponse =
             match DataAccess.getUser connectionString loginForm with
             | None -> register connectionString sessionId loginForm
-            | Some (user: User) -> login connectionString sessionId loginForm user
+            | Some(user: User) -> login connectionString sessionId loginForm user
 
         match loginResponse with
         | Success(user: LoginResult) -> DataAccess.insertSession connectionString user.UserId sessionId
@@ -95,14 +95,7 @@ let initLogin (connectionString: string) (initLoginReq: InitLoginReq) : LoginRes
     }
 
 let subscribe (connectionString: string) (subscribeReq: SubscribeReq) : unit Async =
-    async {
-        (DataAccess.getRSSUrls connectionString subscribeReq.UserId)
-        |> List.map (fun (rssURL: string) ->
-            { RSSHistory.Url = rssURL
-              RSSHistory.LatestUpdated = DateTime.Now })
-        |> (DataAccess.setUserEmail connectionString (subscribeReq.UserId, subscribeReq.Email))
-        |> ignore
-    }
+    async { DataAccess.setUserEmail connectionString (subscribeReq.UserId, subscribeReq.Email) }
 
 let unsubscribe (connectionString: string) (unsubscribeReq: UnsubscribeReq) : unit Async =
     async { (DataAccess.unsetUserEmail connectionString unsubscribeReq.Email) |> ignore }

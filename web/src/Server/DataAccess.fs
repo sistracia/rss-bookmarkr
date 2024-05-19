@@ -142,9 +142,10 @@ let unsetUserEmail (connectionString: string) (email: string) : unit =
     |> Sql.executeNonQuery
     |> ignore
 
-let setUserEmail (connectionString: string) (userId: string, email: string) (newRSSHistories: RSSHistory seq) : unit =
+let setUserEmail (connectionString: string) (userId: string, email: string) : unit =
     connectionString
     |> Sql.connect
     |> Sql.query "UPDATE users SET email = @email WHERE id = @id"
     |> Sql.parameters [ "@id", Sql.text userId; "@email", Sql.text email ]
+    |> Sql.executeNonQuery
     |> ignore
