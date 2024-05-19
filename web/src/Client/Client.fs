@@ -198,10 +198,13 @@ module RSS =
                 Cmd.OfAsync.attempt RPC.saveRSSUrlssss (user.UserId, state.Urls) ofError
             | None -> Cmd.none
         | GetRSSList(urls: string array) ->
-            let nextState: State = { state with ServerState = Loading }
-            let ofError = fun (ex: exn) -> Some ex.Message |> SetError
-            let nextCmd: Cmd<Msg> = Cmd.OfAsync.either RPC.getRSSList urls GotRSSList ofError
-            nextState, nextCmd
+            match state.ServerState with
+            | Loading -> state, Cmd.none
+            | _ ->
+                let nextState: State = { state with ServerState = Loading }
+                let ofError = fun (ex: exn) -> Some ex.Message |> SetError
+                let nextCmd: Cmd<Msg> = Cmd.OfAsync.either RPC.getRSSList urls GotRSSList ofError
+                nextState, nextCmd
         | GotRSSList(rssList: RSS seq) ->
             { state with
                 ServerState = Idle
