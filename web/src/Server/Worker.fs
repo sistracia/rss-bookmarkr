@@ -21,7 +21,7 @@ type SendEmailSubscription(delay: int, rssProcessingService: RSSWorker.IRSSProce
             try
                 logger.LogInformation "Background service running."
 
-                let mutable isSend = false
+                let mutable isSend: bool = DateTime.Now.Hour = 0
 
                 while true do
                     logger.LogInformation "Background service run."

@@ -26,20 +26,17 @@ type RSSProcessingService(connectionString: string, publicHost: string, mailServ
                 |> Async.Parallel
         }
 
-    /// New RSS determined by latest updated is higher compare to the stored one in database.
-    member private __.FilterNewRemoteRSS (history: RSSHistory) (remoteRSS: RSS) : bool =
-        DateTime.Compare(remoteRSS.PublishDate, history.LatestUpdated) >= 0
-
-    member private this.MapRSSHistoryWithRemote (remoteRSSListMap: Map<string, RSS seq>) (history: RSSHistory) =
-        remoteRSSListMap.Item history.Url
-        |> Seq.filter (this.FilterNewRemoteRSS history)
-
     /// Get new RSS from remote URL and compare with RSS history in database
     /// to get detect new publised RSS from remote URL
-    member this.FilterNewRSS (histories: RSSHistory array) (remoteRSSList: (string * RSS seq) array) : RSS seq array =
+    member __.FilterNewRSS (timeLimit: DateTime) (remoteRSSList: (string * RSS seq) array) : RSS seq array =
         // Create map used for value lookup
         let remoteRSSListMap: Map<string, RSS seq> = remoteRSSList |> Map.ofArray
-        histories |> Array.map (this.MapRSSHistoryWithRemote remoteRSSListMap)
+
+        remoteRSSList
+        |> Array.map (fun (remoteRSSList: string * RSS seq) ->
+            remoteRSSListMap.Item(fst remoteRSSList)
+            // New RSS determined by the publish date within the time limit
+            |> Seq.filter (fun (remoteRSS: RSS) -> remoteRSS.PublishDate > timeLimit))
 
     member __.FlattenNewRSS(recentRemoteRSSList: RSS seq array) : RSS seq =
         recentRemoteRSSList
@@ -100,7 +97,7 @@ type RSSProcessingService(connectionString: string, publicHost: string, mailServ
             let rssHistories: RSSHistory array = rssAggregate.HistoryPairs |> Array.choose id
 
             let! (rssList: (string * RSS seq) array) = this.GetLatestRemoteRSS rssHistories
-            let newRSS: RSS seq array = this.FilterNewRSS rssHistories rssList
+            let newRSS: RSS seq array = this.FilterNewRSS (DateTime.Now.AddHours(-24.0)) rssList
             let flatNewRSS: RSS seq = this.FlattenNewRSS newRSS
 
             if (newRSS |> Seq.length) <> 0 && email <> "" then

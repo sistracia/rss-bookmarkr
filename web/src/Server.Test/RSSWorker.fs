@@ -31,25 +31,11 @@ let generateRemoteRSS (day: Day) (origin: string) : RSS =
       RSS.Title = sprintf "%sRemote Title" dayString
       RSS.PublishDate = DateTime.Today.AddDays(float day) }
 
-let generateHistoryRSS (day: Day) (url: string) : RSSHistory =
-    { RSSHistory.Url = url
-      RSSHistory.LatestUpdated = DateTime.Today.AddDays(float day) }
-
-let overreadtedURL: string = "https://overreacted.io/rss.xml"
+let overreactedURL: string = "https://overreacted.io/rss.xml"
 let infoqURL: string = "https://feed.infoq.com/"
 let stackoverflowURL: string = "https://stackoverflow.blog/feed/"
 
-let rssURLs: string array = [| overreadtedURL; infoqURL; stackoverflowURL |]
-
-let groupedRemoteRSSList =
-    rssURLs
-    |> Array.map (fun (rssURL: string) ->
-        let remoteRSSList: RSS seq =
-            [ (generateRemoteRSS Day.Yesterday) rssURL
-              (generateRemoteRSS Day.Today) rssURL
-              (generateRemoteRSS Day.Tomorrow) rssURL ]
-
-        (rssURL, remoteRSSList))
+let rssURLs: string array = [| overreactedURL; infoqURL; stackoverflowURL |]
 
 [<Tests>]
 let rssWorkerTests =
@@ -73,28 +59,62 @@ let rssWorkerTests =
 
                     "FilterNewRSS > should be resulting the latest RSS from remote that has latest published date compare to last updated date in RSS history",
                     (fun (rssProcessingService: RSSWorker.RSSProcessingService) ->
-                        let hiistoryRSSList: RSSHistory array =
-                            [| (generateHistoryRSS Day.Yesterday) overreadtedURL
-                               (generateHistoryRSS Day.Today) infoqURL
-                               (generateHistoryRSS Day.Tomorrow) stackoverflowURL |]
+                        let overreactedRSS: RSS = (generateRemoteRSS Day.Today) overreactedURL
 
-                        let expectedOverreacted: RSS seq =
-                            [ (generateRemoteRSS Day.Yesterday) overreadtedURL
-                              (generateRemoteRSS Day.Today) overreadtedURL
-                              (generateRemoteRSS Day.Tomorrow) overreadtedURL ]
+                        let overreactedRSSP12: RSS =
+                            { overreactedRSS with
+                                PublishDate = DateTime.Today.AddHours(12) }
 
-                        let expectedInfoq: RSS seq =
-                            [ (generateRemoteRSS Day.Today) infoqURL
-                              (generateRemoteRSS Day.Tomorrow) infoqURL ]
+                        let overreactedRSSP1: RSS =
+                            { overreactedRSS with
+                                PublishDate = DateTime.Today.AddHours(1) }
 
-                        let expectedStackoveflow: RSS seq =
-                            [ (generateRemoteRSS Day.Tomorrow) stackoverflowURL ]
+                        let overreactedRSSP0: RSS =
+                            { overreactedRSS with
+                                PublishDate = DateTime.Today.AddHours(0) }
+
+                        let overreactedRSSM1: RSS =
+                            { overreactedRSS with
+                                PublishDate = DateTime.Today.AddHours(-1) }
+
+                        let overreactedRSSM12: RSS =
+                            { overreactedRSS with
+                                PublishDate = DateTime.Today.AddHours(-12) }
+
+                        let overreactedRSSM23: RSS =
+                            { overreactedRSS with
+                                PublishDate = DateTime.Today.AddHours(-23) }
+
+                        let overreactedRSSM24: RSS =
+                            { overreactedRSS with
+                                PublishDate = DateTime.Today.AddHours(-24) }
+
+                        let overreactedRSSM25: RSS =
+                            { overreactedRSS with
+                                Title = "8"
+                                PublishDate = DateTime.Today.AddHours(-25) }
+
+                        let groupedRemoteRSSList: (string * RSS seq) array =
+                            [| (overreactedURL,
+                                [ overreactedRSSP12
+                                  overreactedRSSP1
+                                  overreactedRSSP0
+                                  overreactedRSSM1
+                                  overreactedRSSM12
+                                  overreactedRSSM23
+                                  overreactedRSSM24
+                                  overreactedRSSM25 ]) |]
 
                         let expected: RSS seq array =
-                            [| expectedOverreacted; expectedInfoq; expectedStackoveflow |]
+                            [| [ overreactedRSSP12
+                                 overreactedRSSP1
+                                 overreactedRSSP0
+                                 overreactedRSSM1
+                                 overreactedRSSM12
+                                 overreactedRSSM23 ] |]
 
                         let actual: RSS seq array =
-                            rssProcessingService.FilterNewRSS hiistoryRSSList groupedRemoteRSSList
+                            rssProcessingService.FilterNewRSS (DateTime.Today.AddHours(-24.0)) groupedRemoteRSSList
 
                         Expect.isNonEmpty actual "Actual not empty"
                         Expect.equal actual.Length expected.Length "Actual length should be match expected length"
@@ -125,19 +145,20 @@ let rssWorkerTests =
                     "FlattenNewRSS > should be resulting the flat list version of remote RSS from 2D list of remote RSS",
                     (fun (rssProcessingService: RSSWorker.RSSProcessingService) ->
                         let overreactedRSS: RSS seq =
-                            [ (generateRemoteRSS Day.Yesterday) overreadtedURL
-                              (generateRemoteRSS Day.Today) overreadtedURL
-                              (generateRemoteRSS Day.Tomorrow) overreadtedURL ]
+                            [ (generateRemoteRSS Day.Yesterday) overreactedURL
+                              (generateRemoteRSS Day.Today) overreactedURL
+                              (generateRemoteRSS Day.Tomorrow) overreactedURL ]
 
                         let infoqRSS: RSS seq =
                             [ (generateRemoteRSS Day.Today) infoqURL
                               (generateRemoteRSS Day.Tomorrow) infoqURL ]
 
-                        let stackoveflowRSS: RSS seq = [ (generateRemoteRSS Day.Tomorrow) stackoverflowURL ]
+                        let stackoverflowRSS: RSS seq =
+                            [ (generateRemoteRSS Day.Tomorrow) stackoverflowURL ]
 
-                        let input: RSS seq array = [| overreactedRSS; infoqRSS; stackoveflowRSS |]
+                        let input: RSS seq array = [| overreactedRSS; infoqRSS; stackoverflowRSS |]
 
-                        let expected: RSS seq = Seq.concat [ overreactedRSS; infoqRSS; stackoveflowRSS ]
+                        let expected: RSS seq = Seq.concat [ overreactedRSS; infoqRSS; stackoverflowRSS ]
 
                         let actual: RSS seq = rssProcessingService.FlattenNewRSS input
 
@@ -165,20 +186,21 @@ let rssWorkerTests =
                     "LatestNewRSS > should be pick only head item in inner list of 2D list of remote RSS",
                     (fun (rssProcessingService: RSSWorker.RSSProcessingService) ->
                         let overreactedRSS: RSS seq =
-                            [ (generateRemoteRSS Day.Yesterday) overreadtedURL
-                              (generateRemoteRSS Day.Today) overreadtedURL
-                              (generateRemoteRSS Day.Tomorrow) overreadtedURL ]
+                            [ (generateRemoteRSS Day.Yesterday) overreactedURL
+                              (generateRemoteRSS Day.Today) overreactedURL
+                              (generateRemoteRSS Day.Tomorrow) overreactedURL ]
 
                         let infoqRSS: RSS seq =
                             [ (generateRemoteRSS Day.Today) infoqURL
                               (generateRemoteRSS Day.Tomorrow) infoqURL ]
 
-                        let stackoveflowRSS: RSS seq = [ (generateRemoteRSS Day.Tomorrow) stackoverflowURL ]
+                        let stackoverflowRSS: RSS seq =
+                            [ (generateRemoteRSS Day.Tomorrow) stackoverflowURL ]
 
-                        let input: RSS seq array = [| overreactedRSS; infoqRSS; stackoveflowRSS |]
+                        let input: RSS seq array = [| overreactedRSS; infoqRSS; stackoverflowRSS |]
 
                         let expected: RSS seq =
-                            [ (generateRemoteRSS Day.Yesterday) overreadtedURL
+                            [ (generateRemoteRSS Day.Yesterday) overreactedURL
                               (generateRemoteRSS Day.Today) infoqURL
                               (generateRemoteRSS Day.Tomorrow) stackoverflowURL ]
 
@@ -205,4 +227,6 @@ let rssWorkerTests =
 
                     )
 
-                    ] ]
+                    ]
+
+          ]
