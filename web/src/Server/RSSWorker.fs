@@ -13,15 +13,15 @@ type IRSSProcessingService =
 
 type RSSProcessingService(connectionString: string, publicHost: string, mailService: Mail.IMailService) =
 
-    member private __.GetLatestRemoteRSS(histories: RSSHistory array) =
+    member private __.GetLatestRemoteRSS(urls: string array) =
         async {
             return!
-                histories
-                |> Array.map (fun (history: RSSHistory) ->
+                urls
+                |> Array.map (fun (url: string) ->
                     // Transform to async function that return tuple of url and RSS list
                     async {
-                        let! (remoteRSSList: RSS seq) = RSSFetcher.parseRSS history.Url
-                        return (history.Url, remoteRSSList)
+                        let! (remoteRSSList: RSS seq) = RSSFetcher.parseRSS url
+                        return (url, remoteRSSList)
                     })
                 |> Async.Parallel
         }
@@ -94,7 +94,7 @@ type RSSProcessingService(connectionString: string, publicHost: string, mailServ
     member private this.ProceedSubscriber(rssAggregate: RSSEmailsAggregate) : Async<(string * RSS seq) option> =
         async {
             let email: string = rssAggregate.Email
-            let rssHistories: RSSHistory array = rssAggregate.HistoryPairs |> Array.choose id
+            let rssHistories: string array = rssAggregate.Urls
 
             let! (rssList: (string * RSS seq) array) = this.GetLatestRemoteRSS rssHistories
             let newRSS: RSS seq array = this.FilterNewRSS (DateTime.Now.AddHours(-24.0)) rssList

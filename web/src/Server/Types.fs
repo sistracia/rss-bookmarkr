@@ -42,10 +42,7 @@ type User =
       Password: string
       Email: string }
 
-type RSSHistory =
-    { Url: string; LatestUpdated: DateTime }
-
 type RSSEmailsAggregate =
     { UserId: string
       Email: string
-      HistoryPairs: RSSHistory option array }
+      Urls: string array }

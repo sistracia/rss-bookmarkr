@@ -44,9 +44,7 @@ let getRSSUrls (connectionString: string) (userId: string) : string list =
 let insertUrlsQuery (userId: string) (urls: string array) (sql: Sql.SqlProps) =
     sql
     |> Sql.executeTransaction
-        [ """INSERT INTO rss_urls (id, url, user_id) 
-               VALUES (@id, @url, @user_id) 
-               ON CONFLICT (url, user_id) DO UPDATE SET latest_updated = current_timestamp""",
+        [ "INSERT INTO rss_urls (id, url, user_id) VALUES (@id, @url, @user_id)",
           [ yield!
                 urls
                 |> Array.map (fun (url: string) ->
@@ -114,25 +112,19 @@ let aggreateRssEmails (cancellationToken: CancellationToken) (connectionString: 
         """SELECT
                     u.id as user_id,
                     COALESCE(u.email, '') as email,
-                    ARRAY_AGG(ru.url || '|' || ru.latest_updated) AS history_pairs
+                    ARRAY_AGG(ru.url) AS urls
                 FROM
                     users u
                 JOIN
-                    rss_urls ru ON u.id = ru.user_id 
+                    rss_urls ru ON u.id = ru.user_id
+                WHERE
+                    u.email <> ''
                 GROUP BY
                     u.id"""
     |> Sql.execute (fun read ->
         { RSSEmailsAggregate.UserId = read.text "user_id"
           RSSEmailsAggregate.Email = read.text "email"
-          RSSEmailsAggregate.HistoryPairs =
-            (read.stringArray "history_pairs")
-            |> Array.map (fun (pair: string) ->
-                match pair.Split("|") with
-                | [| url: string; latestUpdated: string |] ->
-                    Some
-                        { RSSHistory.Url = url
-                          RSSHistory.LatestUpdated = DateTime.Parse latestUpdated }
-                | _ -> None) })
+          RSSEmailsAggregate.Urls = read.stringArray "urls" })
 
 let unsetUserEmail (connectionString: string) (email: string) : unit =
     connectionString
