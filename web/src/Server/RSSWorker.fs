@@ -3,13 +3,12 @@ module RSSWorker
 open System
 open System.IO
 open System.Threading
-open System.Threading.Tasks
 
 open Shared
 open Types
 
 type IRSSProcessingService =
-    abstract member DoWork: stoppingToken: CancellationToken -> Task
+    abstract member DoWork: stoppingToken: CancellationToken -> unit Async
 
 type RSSProcessingService(connectionString: string, publicHost: string, mailService: Mail.IMailService) =
 
@@ -91,7 +90,7 @@ type RSSProcessingService(connectionString: string, publicHost: string, mailServ
 
         mailService.SendMail mailData
 
-    member private this.ProceedSubscriber(rssAggregate: RSSEmailsAggregate) : Async<(string * RSS seq) option> =
+    member private this.ProceedSubscriber(rssAggregate: RSSEmailsAggregate) : unit Async =
         async {
             let email: string = rssAggregate.Email
             let rssHistories: string array = rssAggregate.Urls
@@ -110,26 +109,15 @@ type RSSProcessingService(connectionString: string, publicHost: string, mailServ
                 // Ignore if there is an error when sending email because invalid email or etc
                 with _ ->
                     ()
-
-                return Some(rssAggregate.UserId, (this.LatestNewRSS newRSS))
-            else
-                return None
         }
 
     interface IRSSProcessingService with
 
         member this.DoWork(stoppingToken: CancellationToken) =
-            task {
-                let! (newRSSList: (string * RSS seq) option array) =
-                    DataAccess.aggreateRssEmails stoppingToken connectionString
-                    |> List.map (this.ProceedSubscriber)
-                    |> Async.Parallel
-
-                newRSSList
-                |> Array.choose id
-                |> Array.iter (fun (newRSS: (string * RSS seq)) ->
-                    snd newRSS
-                    |> Seq.map _.Origin
-                    |> Seq.toArray
-                    |> DataAccess.insertUrlsWithCancellation stoppingToken connectionString (fst newRSS))
+            async {
+                DataAccess.aggreateRssEmails stoppingToken connectionString
+                |> List.map (this.ProceedSubscriber)
+                |> Async.Parallel
+                |> Async.Ignore
+                |> Async.RunSynchronously
             }

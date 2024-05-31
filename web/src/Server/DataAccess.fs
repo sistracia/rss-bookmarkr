@@ -41,8 +41,9 @@ let getRSSUrls (connectionString: string) (userId: string) : string list =
     |> Sql.parameters [ "@user_id", Sql.string userId ]
     |> Sql.execute (fun read -> read.text "url")
 
-let insertUrlsQuery (userId: string) (urls: string array) (sql: Sql.SqlProps) =
-    sql
+let insertUrls (connectionString: string) (userId: string) (urls: string array) =
+    connectionString
+    |> Sql.connect
     |> Sql.executeTransaction
         [ "INSERT INTO rss_urls (id, url, user_id) VALUES (@id, @url, @user_id)",
           [ yield!
@@ -51,20 +52,6 @@ let insertUrlsQuery (userId: string) (urls: string array) (sql: Sql.SqlProps) =
                     [ "@id", Sql.text (Guid.NewGuid().ToString())
                       "@url", Sql.text url
                       "@user_id", Sql.text userId ]) ] ]
-
-let insertUrls (connectionString: string) (userId: string) (urls: string array) =
-    connectionString |> Sql.connect |> insertUrlsQuery userId urls |> ignore
-
-let insertUrlsWithCancellation
-    (cancellationToken: CancellationToken)
-    (connectionString: string)
-    (userId: string)
-    (urls: string array)
-    =
-    connectionString
-    |> Sql.connect
-    |> Sql.cancellationToken cancellationToken
-    |> insertUrlsQuery userId urls
     |> ignore
 
 let deleteUrls (connectionString: string) (userId: string) (urls: string array) : unit =

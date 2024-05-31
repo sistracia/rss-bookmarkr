@@ -2,45 +2,42 @@ module Worker
 
 open System
 open System.Threading
-open System.Threading.Tasks
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 
-type SendEmailSubscription(delay: int, rssProcessingService: RSSWorker.IRSSProcessingService, logger: ILogger<unit>) =
+/// Ref: https://learn.microsoft.com/en-us/aspnet/core/fundamentals/host/hosted-services?view=aspnetcore-8.0&tabs=visual-studio
+type SendEmailSubscription(rssProcessingService: RSSWorker.IRSSProcessingService, logger: ILogger<unit>) =
     inherit BackgroundService()
 
     /// Called when the background service needs to run.
-    override this.ExecuteAsync(stoppingToken: CancellationToken) =
+    override __.ExecuteAsync(stoppingToken: CancellationToken) =
         task {
-            logger.LogInformation "Background service start."
-            this.DoWork(stoppingToken) |> Async.AwaitTask |> ignore
-        }
+            logger.LogInformation "Timed Hosted Service running."
 
-    member private _.DoWork(stoppingToken: CancellationToken) : Task =
-        task {
+            let timer: PeriodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(1.0))
+            let hourSend: int = 21
+            let mutable isSend: bool = DateTime.Now.Hour = hourSend
+
+            // Ref: https://stackoverflow.com/questions/73806802/how-to-use-while-loop-in-f-async-expression
             try
-                logger.LogInformation "Background service running."
 
-                let mutable isSend: bool = DateTime.Now.Hour = 0
+                let rec loop () =
+                    async {
+                        logger.LogInformation "Timed Hosted Service is working"
+                        let! (delayTask: bool) = timer.WaitForNextTickAsync(stoppingToken).AsTask() |> Async.AwaitTask
 
-                while true do
-                    logger.LogInformation "Background service run."
+                        if delayTask then
+                            // Process RSS subscription every within range 12 midnight once
+                            if DateTime.Now.Hour = hourSend && not isSend then
+                                do! rssProcessingService.DoWork stoppingToken
+                                isSend <- true
+                            else if DateTime.Now.Hour <> hourSend then
+                                isSend <- false
 
-                    // Process RSS subscription every within range 12 midnight once
-                    if DateTime.Now.Hour = 0 && not isSend then
-                        do! rssProcessingService.DoWork stoppingToken
-                        isSend <- true
-                    else if DateTime.Now.Hour <> 0 then
-                        isSend <- false
+                            return! loop ()
+                    }
 
-                    do! Task.Delay(delay, stoppingToken)
+                do! Async.StartAsTask(loop ())
             with (ex: exn) ->
-                logger.LogInformation $"error SendEmailSubscription.DoWork: {ex.Message}"
-        }
-
-    /// Called when a background service needs to gracefully shut down.
-    override this.StopAsync(stoppingToken: CancellationToken) =
-        task {
-            logger.LogInformation "Background service shutting down."
-            this.StopAsync stoppingToken |> Async.AwaitTask |> ignore
+                logger.LogInformation $"Timed Hosted Service is stopping: {ex.Message}"
         }

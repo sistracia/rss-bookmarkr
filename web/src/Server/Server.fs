@@ -116,9 +116,7 @@ let app: IHostBuilder =
             let rssProcessingService: RSSWorker.RSSProcessingService =
                 RSSWorker.RSSProcessingService(connectionString, publicHost, mailService)
 
-            let minutesInMS: int = 1000 * 60
-
-            new Worker.SendEmailSubscription(minutesInMS, rssProcessingService, logger))
+            new Worker.SendEmailSubscription(rssProcessingService, logger))
 
         use_router Router.defaultView
         memory_cache
