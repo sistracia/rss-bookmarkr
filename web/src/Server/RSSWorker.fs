@@ -92,14 +92,17 @@ type RSSProcessingService(connectionString: string, publicHost: string, mailServ
 
     member private this.ProceedSubscriber(rssAggregate: RSSEmailsAggregate) : unit Async =
         async {
-            let email: string = rssAggregate.Email
-            let rssHistories: string array = rssAggregate.Urls
+            let { UserId = _
+                  Email = email: string
+                  Urls = urls: string array } =
+                rssAggregate
 
-            let! (rssList: (string * RSS seq) array) = this.GetLatestRemoteRSS rssHistories
-            let newRSS: RSS seq array = this.FilterNewRSS (DateTime.Now.AddHours(-24.0)) rssList
-            let flatNewRSS: RSS seq = this.FlattenNewRSS newRSS
+            let! (rssList: (string * RSS seq) array) = this.GetLatestRemoteRSS urls
 
-            if (newRSS |> Seq.length) <> 0 && email <> "" then
+            let flatNewRSS: RSS seq =
+                rssList |> this.FilterNewRSS(DateTime.Now.AddHours(-24.0)) |> this.FlattenNewRSS
+
+            if (flatNewRSS |> Seq.length) <> 0 && email <> "" then
                 try
                     this.SendEmail
                         (this.CreateEmailRecipient email)

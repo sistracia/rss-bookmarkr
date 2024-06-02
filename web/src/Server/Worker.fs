@@ -15,7 +15,7 @@ type SendEmailSubscription(rssProcessingService: RSSWorker.IRSSProcessingService
             logger.LogInformation "Timed Hosted Service running."
 
             let timer: PeriodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(1.0))
-            let hourSend: int = 21
+            let hourSend: int = 0
             let mutable isSend: bool = DateTime.Now.Hour = hourSend
 
             // Ref: https://stackoverflow.com/questions/73806802/how-to-use-while-loop-in-f-async-expression
