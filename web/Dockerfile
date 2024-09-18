@@ -64,4 +64,8 @@ RUN apt update && apt install -y curl
 COPY --from=server-build /Server/publish .
 COPY --from=server-build /Server/src/Server/Templates Templates
 COPY --from=client-build /Client/src/Client/dist wwwroot
+
+ARG PORT=3000
+EXPOSE ${PORT}
+
 ENTRYPOINT ["dotnet", "Server.dll"]

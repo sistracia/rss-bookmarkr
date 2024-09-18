@@ -87,7 +87,9 @@ MailSettings__SenderEmail=<YOUR@EMAIL>
 MailSettings__UserName=<YOUR MAIL SERVER USERNAME>
 MailSettings__Password=<YOUR MAIL SERVER PASWORD>
 PUBLIC_HOST=<YOUR PUBLIC HOST>
-ASPNETCORE_URLS=<SERVER APP HOST AND PORT INSIDE Docker>
+PORT=<ports that the server should listen on for requests>
+HOSTNAME=<addresses that the server should listen on for requests>
+ASPNETCORE_URLS=http://${HOSTNAME}:${PORT}
 ```
 
 #### Using `docker compose up`

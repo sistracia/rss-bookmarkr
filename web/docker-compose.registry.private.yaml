@@ -1,8 +1,0 @@
-services:
-  web:
-    image: localhost:5000/sistracia/rss-bookmarkr:latest
-    container_name: rss-bookmarkr
-    restart: unless-stopped
-    network_mode: "host"
-    env_file:
-      - .env

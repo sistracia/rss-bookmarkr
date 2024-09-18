@@ -1,8 +1,11 @@
 services:
-  web:
-    build: .
-    container_name: rss-bookmarkr
-    restart: unless-stopped
-    network_mode: "host"
+  rss-bookmarkr:
+    image: rss-bookmarkr
+    build: 
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - PORT=${PORT}
     env_file:
-      - .env
+      - path: ./.env
+        required: true
