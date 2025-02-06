@@ -3,22 +3,16 @@
   "isRoot": true,
   "tools": {
     "paket": {
-      "version": "8.0.3",
-      "commands": [
-        "paket"
-      ]
+      "version": "9.0.2",
+      "commands": ["paket"]
     },
     "fable": {
-      "version": "4.12.2",
-      "commands": [
-        "fable"
-      ]
+      "version": "4.24.0",
+      "commands": ["fable"]
     },
     "migrondi": {
       "version": "0.7.1",
-      "commands": [
-        "migrondi"
-      ]
+      "commands": ["migrondi"]
     }
   }
 }

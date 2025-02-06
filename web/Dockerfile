@@ -1,5 +1,5 @@
 # https://hub.docker.com/_/microsoft-dotnet
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS server-build
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS server-build
 WORKDIR /Server
 
 # Install dependencies
@@ -29,7 +29,10 @@ RUN dotnet publish src/Server -c Release -o publish
 
 # use the official Bun image
 # see all versions at https://hub.docker.com/r/oven/bun/tags
-FROM oven/bun:1 as client-base
+FROM oven/bun:1 AS client-base
+RUN apt update
+RUN apt upgrade
+RUN apt install -y make
 WORKDIR /Client
 
 # install dependencies into temp directory
@@ -52,13 +55,13 @@ COPY . .
 COPY --from=server-build /Server/src/Client/output ./src/Client/output
 
 ENV NODE_ENV=production
-RUN bunx tailwindcss -i ./src/Client/input.css -o ./src/Client/output/output.css --minify
-RUN bunx vite build ./src/Client
+RUN make build_style
+RUN make build_client
 
 ## App Area
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
+FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /App
 RUN apt update && apt install -y curl
 COPY --from=server-build /Server/publish .

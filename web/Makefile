@@ -2,7 +2,8 @@ error:
 	echo "Available option: server, client"
 
 server:
-	dotnet watch run --project src/Server
+    # Temporary use --no-hot-reload, https://github.com/dotnet/sdk/issues/44908
+	dotenvx run -- dotnet watch --no-hot-reload run --project src/Server
 
 client:
 	dotnet fable watch --cwd src/Client -o output -s --run bunx vite

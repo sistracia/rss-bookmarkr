@@ -1,5 +1,5 @@
 {
   "connection": "Userid=postgres;Password=mypassword;Host=localhost;Port=5432;Database=postgres;Pooling=true;MinPoolSize=0;MaxPoolSize=100;ConnectionLifetime=0;",
-  "migrationsDir": "./migrations//",
+  "migrationsDir": "./migrations/",
   "driver": "postgres"
 }
