@@ -75,14 +75,14 @@ let getUserSession (connectionString: string) (sessionId: string) : User option 
     |> Sql.connect
     |> Sql.query
         """SELECT
-                        u.id AS user_id,
-                        u.username AS user_username,
-                        u.password AS user_password,
-                        COALESCE(u.email, '') as user_email
-                    FROM users u
-                    LEFT JOIN sessions s
-                        ON s.user_id = u.id
-                    WHERE s.id = @session_id"""
+                u.id AS user_id,
+                u.username AS user_username,
+                u.password AS user_password,
+                COALESCE(u.email, '') as user_email
+            FROM users u
+            LEFT JOIN sessions s
+                ON s.user_id = u.id
+            WHERE s.id = @session_id"""
     |> Sql.parameters [ "@session_id", Sql.string sessionId ]
     |> Sql.execute (fun (read: RowReader) ->
         { User.Id = read.string "user_id"
@@ -97,17 +97,14 @@ let aggreateRssEmails (cancellationToken: CancellationToken) (connectionString: 
     |> Sql.cancellationToken cancellationToken
     |> Sql.query
         """SELECT
-                    u.id as user_id,
-                    COALESCE(u.email, '') as email,
-                    ARRAY_AGG(ru.url) AS urls
-                FROM
-                    users u
-                JOIN
-                    rss_urls ru ON u.id = ru.user_id
-                WHERE
-                    u.email <> ''
-                GROUP BY
-                    u.id"""
+                u.id as user_id,
+                COALESCE(u.email, '') as email,
+                ARRAY_AGG(ru.url) AS urls
+            FROM users u
+            JOIN rss_urls ru
+                ON u.id = ru.user_id
+            WHERE u.email <> ''
+            GROUP BY u.id"""
     |> Sql.execute (fun read ->
         { RSSEmailsAggregate.UserId = read.text "user_id"
           RSSEmailsAggregate.Email = read.text "email"

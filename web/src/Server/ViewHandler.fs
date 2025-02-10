@@ -7,7 +7,7 @@ open Shared
 open Types
 open Extensions
 
-let unsubsribePageAction (unsubscribeQueryString: UnsubscribeQueryString) : HttpHandler =
+let unsubscribePageAction (unsubscribeQueryString: UnsubscribeQueryString) : HttpHandler =
     fun (next: HttpFunc) (ctx: HttpContext) ->
         task {
             do! Handler.unsubscribe ctx.RssDbConnectionString { UnsubscribeReq.Email = unsubscribeQueryString.Email }

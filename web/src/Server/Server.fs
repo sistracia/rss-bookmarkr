@@ -93,7 +93,7 @@ module Router =
 
             get
                 "/unsubscribe"
-                (tryBindQuery<UnsubscribeQueryString> RequestErrors.BAD_REQUEST None (ViewHandler.unsubsribePageAction))
+                (tryBindQuery<UnsubscribeQueryString> RequestErrors.BAD_REQUEST None (ViewHandler.unsubscribePageAction))
         }
 
 let app: IHostBuilder =

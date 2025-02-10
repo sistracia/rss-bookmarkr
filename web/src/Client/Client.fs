@@ -228,6 +228,125 @@ module RSS =
             let nextState: State = { state with Error = error }
             nextState, Cmd.none
 
+
+    [<ReactComponent>]
+    let SkeletonLoadings () =
+        Daisy.card
+            [ card.bordered
+              prop.className "flex flex-col gap-3 p-8"
+              prop.children
+                  [ Daisy.skeleton [ prop.className "h-6 w-full" ]
+                    Daisy.skeleton [ prop.className "h-4 w-1/4" ]
+                    Daisy.skeleton [ prop.className "h-4 w-1/2" ]
+                    Daisy.skeleton [ prop.className "h-4 w-1/4" ] ] ]
+
+    [<ReactComponent>]
+    let SearchBar (state: State) (dispatch: Msg -> unit) =
+        Html.div
+            [ prop.className "w-full flex flex-wrap gap-3"
+              prop.children
+                  [ Daisy.input
+                        [ input.bordered
+                          prop.value state.Url
+                          prop.onChange (SetUrl >> dispatch)
+                          prop.className "flex-1"
+                          prop.placeholder "https://overreacted.io/rss.xml" ]
+                    Daisy.button.button [ button.neutral; prop.onClick (fun _ -> dispatch AddUrl); prop.text "Add" ] ] ]
+
+    [<ReactComponent>]
+    let RSSChips (state: State) (dispatch: Msg -> unit) =
+        Html.div
+            [ prop.className "flex flex-wrap gap-3"
+              prop.children
+                  [ yield!
+                        [ for url in state.Urls do
+                              Html.div
+                                  [ (color.bgNeutral ++ (prop.className "p-1 rounded-lg flex gap-1"))
+                                    prop.children
+                                        [ Daisy.button.button
+                                              [ button.error
+                                                button.xs
+                                                prop.onClick (fun _ -> dispatch (RemoveUrl url))
+                                                prop.text "X" ]
+                                          Html.span [ color.textNeutralContent; prop.text url ] ] ] ] ] ]
+
+    [<ReactComponent>]
+    let SubscriptionForm (user: User) (state: State) (dispatch: Msg -> unit) =
+        Html.form
+            [ Html.h2 [ prop.text "Subscribe Form" ]
+              Daisy.formControl
+                  [ Daisy.label
+                        [ prop.htmlFor "subscribe-email-field"
+                          prop.children [ Daisy.labelText "E-Mail" ] ]
+                    Daisy.input
+                        [ input.bordered
+                          prop.id "subscribe-email-field"
+                          prop.placeholder "email@domain.com"
+                          prop.required true
+                          prop.value state.Email
+                          prop.onChange (ChangeEmail >> dispatch) ] ]
+              Daisy.modalAction
+                  [ Daisy.button.label [ prop.htmlFor "subscribe-modal"; prop.text "Cancel" ]
+                    Daisy.button.label
+                        [ button.neutral
+                          prop.htmlFor "subscribe-modal"
+                          prop.text "Subscribe"
+                          prop.type' "submit"
+                          prop.onClick (fun _ -> dispatch (Subscribe user.UserId)) ] ] ]
+
+    [<ReactComponent>]
+    let SubscriptionAction (user: User) (state: State) (dispatch: Msg -> unit) =
+        React.fragment
+            [ Daisy.button.label
+                  [ button.link
+                    prop.key "subscribe-button"
+                    prop.htmlFor "subscribe-modal"
+                    prop.text "Subscribe" ]
+
+              Html.div
+                  [ Daisy.modalToggle [ prop.id "subscribe-modal" ]
+                    Daisy.modal.div [ Daisy.modalBox.div [ SubscriptionForm user state dispatch ] ] ] ]
+
+    [<ReactComponent>]
+    let Subscription (user: User option) (state: State) (dispatch: Msg -> unit) =
+        Html.div
+            [ prop.className "flex flex-wrap gap-3"
+              prop.children
+                  [ Daisy.button.button
+                        [ button.link
+                          prop.onClick (fun _ -> dispatch SaveUrls)
+                          prop.text "Save Urls" ]
+                    match user with
+                    | None -> ()
+                    | Some(user: User) ->
+                        match user.Email with
+                        | "" -> SubscriptionAction user state dispatch
+                        | (email: string) ->
+                            Daisy.button.button
+                                [ button.link
+                                  prop.onClick (fun _ -> dispatch (Unsubscribe email))
+                                  prop.text "Unsubscribe" ] ] ]
+
+    [<ReactComponent>]
+    let RSSCard (rss: RSS) =
+        Daisy.card
+            [ card.bordered
+              prop.children
+                  [ Daisy.cardBody
+                        [ Daisy.cardTitle rss.Title
+                          Daisy.link
+                              [ prop.href rss.OriginHostUrl
+                                prop.target "_blank"
+                                prop.rel "noopener"
+                                prop.text rss.OriginHost ]
+                          Html.p (sprintf $"{rss.PublishDate.ToString()} ({rss.TimeAgo})")
+                          Daisy.cardActions
+                              [ Daisy.link
+                                    [ prop.href rss.Link
+                                      prop.target "_blank"
+                                      prop.rel "noopener"
+                                      prop.text "Read" ] ] ] ] ]
+
     let render (user: User option) (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
         Html.div
             [ prop.className "flex flex-col gap-3"
@@ -236,132 +355,19 @@ module RSS =
                     | Loading ->
                         yield!
                             [ for _ in 0..5 do
-                                  Daisy.card
-                                      [ card.bordered
-                                        prop.className "flex flex-col gap-3 p-8"
-                                        prop.children
-                                            [ Daisy.skeleton [ prop.className "h-6 w-full" ]
-                                              Daisy.skeleton [ prop.className "h-4 w-1/4" ]
-                                              Daisy.skeleton [ prop.className "h-4 w-1/2" ]
-                                              Daisy.skeleton [ prop.className "h-4 w-1/4" ] ] ] ]
+                                  SkeletonLoadings() ]
                     | Idle ->
-                        Html.div
-                            [ prop.className "w-full flex flex-wrap gap-3"
-                              prop.children
-                                  [ Daisy.input
-                                        [ input.bordered
-                                          prop.value state.Url
-                                          prop.onChange (SetUrl >> dispatch)
-                                          prop.className "flex-1"
-                                          prop.placeholder "https://overreacted.io/rss.xml" ]
-                                    Daisy.button.button
-                                        [ button.neutral; prop.onClick (fun _ -> dispatch AddUrl); prop.text "Add" ] ] ]
-
-                        Html.div
-                            [ prop.className "flex flex-wrap gap-3"
-                              prop.children
-                                  [ yield!
-                                        [ for url in state.Urls do
-                                              Html.div
-                                                  [ (color.bgNeutral ++ (prop.className "p-1 rounded-lg flex gap-1"))
-                                                    prop.children
-                                                        [ Daisy.button.button
-                                                              [ button.error
-                                                                button.xs
-                                                                prop.onClick (fun _ -> dispatch (RemoveUrl url))
-                                                                prop.text "X" ]
-                                                          Html.span [ color.textNeutralContent; prop.text url ] ] ] ] ] ]
+                        SearchBar state dispatch
+                        RSSChips state dispatch
 
                         if user <> None then
-                            Html.div
-                                [ prop.className "flex flex-wrap gap-3"
-                                  prop.children
-                                      [ Daisy.button.button
-                                            [ button.link
-                                              prop.onClick (fun _ -> dispatch SaveUrls)
-                                              prop.text "Save Urls" ]
-                                        match user with
-                                        | None -> ()
-                                        | Some(user: User) ->
-                                            match user.Email with
-                                            | "" ->
-                                                React.fragment
-                                                    [ Daisy.button.label
-                                                          [ button.link
-                                                            prop.key "subscribe-button"
-                                                            prop.htmlFor "subscribe-modal"
-                                                            prop.text "Subscribe" ]
-
-                                                      Html.div
-                                                          [ Daisy.modalToggle [ prop.id "subscribe-modal" ]
-                                                            Daisy.modal.div
-                                                                [ prop.children
-                                                                      [ Daisy.modalBox.div
-                                                                            [ Html.form
-                                                                                  [ Html.h2
-                                                                                        [ prop.text "Subscribe Form" ]
-                                                                                    Daisy.formControl
-                                                                                        [ Daisy.label
-                                                                                              [ prop.htmlFor
-                                                                                                    "subscribe-email-field"
-                                                                                                prop.children
-                                                                                                    [ Daisy.labelText
-                                                                                                          "E-Mail" ] ]
-                                                                                          Daisy.input
-                                                                                              [ input.bordered
-                                                                                                prop.id
-                                                                                                    "subscribe-email-field"
-                                                                                                prop.placeholder
-                                                                                                    "email@domain.com"
-                                                                                                prop.required true
-                                                                                                prop.value state.Email
-                                                                                                prop.onChange (
-                                                                                                    ChangeEmail
-                                                                                                    >> dispatch
-                                                                                                ) ] ]
-                                                                                    Daisy.modalAction
-                                                                                        [ Daisy.button.label
-                                                                                              [ prop.htmlFor
-                                                                                                    "subscribe-modal"
-                                                                                                prop.text "Cancel" ]
-                                                                                          Daisy.button.label
-                                                                                              [ button.neutral
-                                                                                                prop.htmlFor
-                                                                                                    "subscribe-modal"
-                                                                                                prop.text "Subscribe"
-                                                                                                prop.type' "submit"
-                                                                                                prop.onClick (fun _ ->
-                                                                                                    dispatch (
-                                                                                                        Subscribe
-                                                                                                            user.UserId
-                                                                                                    )) ] ] ] ] ] ] ] ]
-                                            | (email: string) ->
-                                                Daisy.button.button
-                                                    [ button.link
-                                                      prop.onClick (fun _ -> dispatch (Unsubscribe email))
-                                                      prop.text "Unsubscribe" ] ] ]
+                            Subscription user state dispatch
 
                         Component.renderError state.Error
 
                         yield!
                             [ for rss in state.RSSList do
-                                  Daisy.card
-                                      [ card.bordered
-                                        prop.children
-                                            [ Daisy.cardBody
-                                                  [ Daisy.cardTitle rss.Title
-                                                    Daisy.link
-                                                        [ prop.href rss.OriginHostUrl
-                                                          prop.target "_blank"
-                                                          prop.rel "noopener"
-                                                          prop.text rss.OriginHost ]
-                                                    Html.p (sprintf $"{rss.PublishDate.ToString()} ({rss.TimeAgo})")
-                                                    Daisy.cardActions
-                                                        [ Daisy.link
-                                                              [ prop.href rss.Link
-                                                                prop.target "_blank"
-                                                                prop.rel "noopener"
-                                                                prop.text "Read" ] ] ] ] ] ]
+                                  RSSCard rss ]
                     | Error(error: exn option) ->
                         match error with
                         | Some(error: exn) -> Component.renderError (Some error.Message)
@@ -440,65 +446,74 @@ module Auth =
         | LoginSuccess(_: LoginResult option)
         | Logout -> state, Cmd.none
 
+    [<ReactComponent>]
+    let NavBar (isLoggedIn: bool) (dispatch: Msg -> unit) =
+        Daisy.navbar
+            [ prop.className "mb-2 shadow-lg bg-neutral text-neutral-content rounded-box"
+              prop.children
+                  [ Daisy.navbarStart [ Html.h1 [ prop.text "RSS Bookmarkr" ] ]
+                    Daisy.navbarEnd
+                        [ match isLoggedIn with
+                          | true ->
+                              Daisy.button.label
+                                  [ button.ghost
+                                    prop.key "logout-button"
+                                    prop.onClick (fun _ -> dispatch Logout)
+                                    prop.text "Log Out" ]
+                          | false ->
+                              Daisy.button.label
+                                  [ button.ghost
+                                    prop.key "login-button"
+                                    prop.htmlFor "login-modal"
+                                    prop.text "Log In" ] ] ] ]
+
+    [<ReactComponent>]
+    let LoginForm (state: State) (dispatch: Msg -> unit) =
+        Html.form
+            [ Html.h2 [ prop.text "Log In Form" ]
+              Daisy.formControl
+                  [ Daisy.label
+                        [ prop.htmlFor "login-username-field"
+                          prop.children [ Daisy.labelText "Username" ] ]
+                    Daisy.input
+                        [ input.bordered
+                          prop.id "login-username-field"
+                          prop.placeholder "Username"
+                          prop.required true
+                          prop.value state.InputUsername
+                          prop.onChange (ChangeUsername >> dispatch) ] ]
+              Daisy.formControl
+                  [ Daisy.label
+                        [ prop.htmlFor "password-username-field"
+                          prop.children [ Daisy.labelText "Password" ] ]
+                    Daisy.input
+                        [ input.bordered
+                          prop.id "password-username-field"
+                          prop.type' "password"
+                          prop.placeholder "******"
+                          prop.required true
+                          prop.value state.InputPassword
+                          prop.onChange (ChangePassword >> dispatch) ] ]
+              Html.p "Account will be automatically created if not exist."
+              Daisy.modalAction
+                  [ Daisy.button.label [ prop.htmlFor "login-modal"; prop.text "Cancel" ]
+                    Daisy.button.label
+                        [ button.neutral
+                          prop.htmlFor "login-modal"
+                          prop.text "Log In"
+                          prop.type' "submit"
+                          prop.onClick (fun _ -> dispatch Login) ] ] ]
+
+    [<ReactComponent>]
+    let LoginAction (state: State) (dispatch: Msg -> unit) =
+        Html.div
+            [ Daisy.modalToggle [ prop.id "login-modal" ]
+              Daisy.modal.div [ prop.children [ Daisy.modalBox.div [ LoginForm state dispatch ] ] ] ]
+
     let render (isLoggedIn: bool) (state: State) (dispatch: Msg -> unit) : Fable.React.ReactElement =
         React.fragment
-            [ Daisy.navbar
-                  [ prop.className "mb-2 shadow-lg bg-neutral text-neutral-content rounded-box"
-                    prop.children
-                        [ Daisy.navbarStart [ Html.h1 [ prop.text "RSS Bookmarkr" ] ]
-                          Daisy.navbarEnd
-                              [ match isLoggedIn with
-                                | true ->
-                                    Daisy.button.label
-                                        [ button.ghost
-                                          prop.key "logout-button"
-                                          prop.onClick (fun _ -> dispatch Logout)
-                                          prop.text "Log Out" ]
-                                | false ->
-                                    Daisy.button.label
-                                        [ button.ghost
-                                          prop.key "login-button"
-                                          prop.htmlFor "login-modal"
-                                          prop.text "Log In" ] ] ] ]
-              Html.div
-                  [ Daisy.modalToggle [ prop.id "login-modal" ]
-                    Daisy.modal.div
-                        [ prop.children
-                              [ Daisy.modalBox.div
-                                    [ Html.form
-                                          [ Html.h2 [ prop.text "Log In Form" ]
-                                            Daisy.formControl
-                                                [ Daisy.label
-                                                      [ prop.htmlFor "login-username-field"
-                                                        prop.children [ Daisy.labelText "Username" ] ]
-                                                  Daisy.input
-                                                      [ input.bordered
-                                                        prop.id "login-username-field"
-                                                        prop.placeholder "Username"
-                                                        prop.required true
-                                                        prop.value state.InputUsername
-                                                        prop.onChange (ChangeUsername >> dispatch) ] ]
-                                            Daisy.formControl
-                                                [ Daisy.label
-                                                      [ prop.htmlFor "password-username-field"
-                                                        prop.children [ Daisy.labelText "Password" ] ]
-                                                  Daisy.input
-                                                      [ input.bordered
-                                                        prop.id "password-username-field"
-                                                        prop.type' "password"
-                                                        prop.placeholder "******"
-                                                        prop.required true
-                                                        prop.value state.InputPassword
-                                                        prop.onChange (ChangePassword >> dispatch) ] ]
-                                            Html.p "Account will be automatically created if not exist."
-                                            Daisy.modalAction
-                                                [ Daisy.button.label [ prop.htmlFor "login-modal"; prop.text "Cancel" ]
-                                                  Daisy.button.label
-                                                      [ button.neutral
-                                                        prop.htmlFor "login-modal"
-                                                        prop.text "Log In"
-                                                        prop.type' "submit"
-                                                        prop.onClick (fun _ -> dispatch Login) ] ] ] ] ] ] ]
+            [ NavBar isLoggedIn dispatch
+              LoginAction state dispatch
               Component.renderError state.Error ]
 
 

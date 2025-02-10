@@ -5,7 +5,7 @@ open System.ServiceModel.Syndication
 
 open Shared
 
-let mapSydicatoinItem (originURL: string) (item: SyndicationItem) : RSS =
+let mapSydicationItem (originURL: string) (item: SyndicationItem) : RSS =
     { RSS.Origin = originURL
       RSS.Title = item.Title.Text
       RSS.PublishDate = item.PublishDate.DateTime
@@ -20,7 +20,7 @@ let getRSSItems (url: string) =
     (SyndicationFeed.Load reader).Items
 
 let parseRSSItems (url: string) : Async<RSS seq> =
-    async { return url |> getRSSItems |> Seq.map (mapSydicatoinItem url) }
+    async { return url |> getRSSItems |> Seq.map (mapSydicationItem url) }
 
 let parseRSS (url: string) : Async<RSS seq> =
     async {
