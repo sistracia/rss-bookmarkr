@@ -15,6 +15,16 @@
 		EE28ACEA2C0F610000309C42 /* RSSBookmarkrUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE28ACE92C0F610000309C42 /* RSSBookmarkrUITests.swift */; };
 		EE28ACEC2C0F610000309C42 /* RSSBookmarkrUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE28ACEB2C0F610000309C42 /* RSSBookmarkrUITestsLaunchTests.swift */; };
 		EE28ACF92C0F61C000309C42 /* test.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE28ACF82C0F61C000309C42 /* test.swift */; };
+		EE9721BC2D5AF20800B359B3 /* RSSBookmarkrClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9721BB2D5AF20800B359B3 /* RSSBookmarkrClient.swift */; };
+		EE9721BE2D5AF5A900B359B3 /* RSS.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9721BD2D5AF5A600B359B3 /* RSS.swift */; };
+		EE9721C02D5AF7C900B359B3 /* RSSError.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9721BF2D5AF7C500B359B3 /* RSSError.swift */; };
+		EE9721C22D5B023900B359B3 /* RSSHTTPClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9721C12D5B023300B359B3 /* RSSHTTPClient.swift */; };
+		EE9721C42D5B103300B359B3 /* InitLoginRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9721C32D5B102200B359B3 /* InitLoginRequest.swift */; };
+		EE9721C62D5B3CFE00B359B3 /* LoginRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9721C52D5B3CFB00B359B3 /* LoginRequest.swift */; };
+		EE9721C82D5B3F3000B359B3 /* LoginResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9721C72D5B3F2E00B359B3 /* LoginResponse.swift */; };
+		EE9721CA2D5B435C00B359B3 /* SaveRSSUrlRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9721C92D5B435200B359B3 /* SaveRSSUrlRequest.swift */; };
+		EE9721CC2D5B43DC00B359B3 /* SubscribeRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9721CB2D5B43D900B359B3 /* SubscribeRequest.swift */; };
+		EE9721CE2D5B447100B359B3 /* UnsubscribeRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9721CD2D5B446E00B359B3 /* UnsubscribeRequest.swift */; };
 		EEEA4F7C2C109771007CD9B8 /* LoginForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEEA4F7B2C109771007CD9B8 /* LoginForm.swift */; };
 		EEEA4F7F2C10B6FD007CD9B8 /* ModelData.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEEA4F7E2C10B6FD007CD9B8 /* ModelData.swift */; };
 		EEEA4F822C10B714007CD9B8 /* Profile.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEEA4F812C10B714007CD9B8 /* Profile.swift */; };
@@ -49,6 +59,16 @@
 		EE28ACE92C0F610000309C42 /* RSSBookmarkrUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSBookmarkrUITests.swift; sourceTree = "<group>"; };
 		EE28ACEB2C0F610000309C42 /* RSSBookmarkrUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSBookmarkrUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		EE28ACF82C0F61C000309C42 /* test.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = test.swift; sourceTree = "<group>"; };
+		EE9721BB2D5AF20800B359B3 /* RSSBookmarkrClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSBookmarkrClient.swift; sourceTree = "<group>"; };
+		EE9721BD2D5AF5A600B359B3 /* RSS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSS.swift; sourceTree = "<group>"; };
+		EE9721BF2D5AF7C500B359B3 /* RSSError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSError.swift; sourceTree = "<group>"; };
+		EE9721C12D5B023300B359B3 /* RSSHTTPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSHTTPClient.swift; sourceTree = "<group>"; };
+		EE9721C32D5B102200B359B3 /* InitLoginRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InitLoginRequest.swift; sourceTree = "<group>"; };
+		EE9721C52D5B3CFB00B359B3 /* LoginRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginRequest.swift; sourceTree = "<group>"; };
+		EE9721C72D5B3F2E00B359B3 /* LoginResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginResponse.swift; sourceTree = "<group>"; };
+		EE9721C92D5B435200B359B3 /* SaveRSSUrlRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveRSSUrlRequest.swift; sourceTree = "<group>"; };
+		EE9721CB2D5B43D900B359B3 /* SubscribeRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscribeRequest.swift; sourceTree = "<group>"; };
+		EE9721CD2D5B446E00B359B3 /* UnsubscribeRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnsubscribeRequest.swift; sourceTree = "<group>"; };
 		EEEA4F7B2C109771007CD9B8 /* LoginForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginForm.swift; sourceTree = "<group>"; };
 		EEEA4F7E2C10B6FD007CD9B8 /* ModelData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelData.swift; sourceTree = "<group>"; };
 		EEEA4F812C10B714007CD9B8 /* Profile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Profile.swift; sourceTree = "<group>"; };
@@ -157,8 +177,18 @@
 		EEEA4F7D2C10B6F1007CD9B8 /* Model */ = {
 			isa = PBXGroup;
 			children = (
+				EE9721CD2D5B446E00B359B3 /* UnsubscribeRequest.swift */,
+				EE9721CB2D5B43D900B359B3 /* SubscribeRequest.swift */,
+				EE9721C92D5B435200B359B3 /* SaveRSSUrlRequest.swift */,
+				EE9721C72D5B3F2E00B359B3 /* LoginResponse.swift */,
+				EE9721C52D5B3CFB00B359B3 /* LoginRequest.swift */,
+				EE9721C32D5B102200B359B3 /* InitLoginRequest.swift */,
+				EE9721C12D5B023300B359B3 /* RSSHTTPClient.swift */,
+				EE9721BF2D5AF7C500B359B3 /* RSSError.swift */,
+				EE9721BD2D5AF5A600B359B3 /* RSS.swift */,
 				EEEA4F7E2C10B6FD007CD9B8 /* ModelData.swift */,
 				EEEA4F812C10B714007CD9B8 /* Profile.swift */,
+				EE9721BB2D5AF20800B359B3 /* RSSBookmarkrClient.swift */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -293,10 +323,20 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EE9721C42D5B103300B359B3 /* InitLoginRequest.swift in Sources */,
+				EE9721CE2D5B447100B359B3 /* UnsubscribeRequest.swift in Sources */,
+				EE9721CA2D5B435C00B359B3 /* SaveRSSUrlRequest.swift in Sources */,
 				EE28ACD12C0F60FF00309C42 /* ContentView.swift in Sources */,
 				EEEA4F822C10B714007CD9B8 /* Profile.swift in Sources */,
+				EE9721CC2D5B43DC00B359B3 /* SubscribeRequest.swift in Sources */,
+				EE9721C62D5B3CFE00B359B3 /* LoginRequest.swift in Sources */,
 				EE28ACF92C0F61C000309C42 /* test.swift in Sources */,
 				EEEA4F7F2C10B6FD007CD9B8 /* ModelData.swift in Sources */,
+				EE9721C82D5B3F3000B359B3 /* LoginResponse.swift in Sources */,
+				EE9721C02D5AF7C900B359B3 /* RSSError.swift in Sources */,
+				EE9721BE2D5AF5A900B359B3 /* RSS.swift in Sources */,
+				EE9721C22D5B023900B359B3 /* RSSHTTPClient.swift in Sources */,
+				EE9721BC2D5AF20800B359B3 /* RSSBookmarkrClient.swift in Sources */,
 				EE28ACCF2C0F60FF00309C42 /* RSSBookmarkrApp.swift in Sources */,
 				EEEA4F7C2C109771007CD9B8 /* LoginForm.swift in Sources */,
 			);

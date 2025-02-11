@@ -67,7 +67,7 @@ module Router =
 
             post
                 "/login"
-                (tryBindJson<LoginForm> RequestErrors.BAD_REQUEST (validateModel ApiHandler.loginOrRegisterAction))
+                (tryBindJson<LoginReq> RequestErrors.BAD_REQUEST (validateModel ApiHandler.loginOrRegisterAction))
 
             post
                 "/save-urls"

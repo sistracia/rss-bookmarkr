@@ -42,6 +42,6 @@ struct ContentView: View {
 }
 
 #Preview {
-    @State var modelData = ModelData()
+    @Previewable @State var modelData = ModelData()
     return ContentView().environment(modelData)
 }

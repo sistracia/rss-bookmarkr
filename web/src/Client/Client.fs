@@ -50,7 +50,7 @@ module RPC =
 
     let getRSSList (urls: string array) : Async<RSS seq> = async { return! store.getRSSList urls }
 
-    let loginOrRegister (loginForm: LoginForm) : LoginResponse Async =
+    let loginOrRegister (loginForm: LoginReq) : LoginResponse Async =
         async { return! store.loginOrRegister loginForm }
 
     let saveRSSUrlssss (userId: string, rssUrls: string array) : unit Async =
@@ -386,7 +386,7 @@ module Auth =
         | ChangePassword of string
         | Login
         | InitUser
-        | LoginSuccess of LoginResult option
+        | LoginSuccess of LoginSuccess option
         | SetError of error: string option
         | Logout
 
@@ -413,14 +413,14 @@ module Auth =
             else
                 let nextState: State = { state with LoggingIn = true }
 
-                let credentials: LoginForm =
-                    { LoginForm.Username = state.InputUsername
-                      LoginForm.Password = state.InputPassword }
+                let credentials: LoginReq =
+                    { LoginReq.Username = state.InputUsername
+                      LoginReq.Password = state.InputPassword }
 
                 let ofSuccess =
                     function
-                    | Success(loginResult: LoginResult) -> Some loginResult |> LoginSuccess
-                    | Failed(_: LoginError) -> Some "The password you entered is incorrect." |> SetError
+                    | Success(loginResult: LoginSuccess) -> Some loginResult |> LoginSuccess
+                    | Failed(_: LoginFailed) -> Some "The password you entered is incorrect." |> SetError
 
                 let ofError = (fun (ex: exn) -> Some ex.Message |> SetError)
 
@@ -431,7 +431,7 @@ module Auth =
             | Some(sessionId: string) ->
                 let ofSuccess =
                     function
-                    | Success(loginResult: LoginResult) -> Some loginResult |> LoginSuccess
+                    | Success(loginResult: LoginSuccess) -> Some loginResult |> LoginSuccess
                     | _ -> Some "Failed to login account." |> SetError
 
                 let ofError = (fun (ex: exn) -> Some ex.Message |> SetError)
@@ -443,7 +443,7 @@ module Auth =
                     Error = error }
 
             nextState, Cmd.none
-        | LoginSuccess(_: LoginResult option)
+        | LoginSuccess(_: LoginSuccess option)
         | Logout -> state, Cmd.none
 
     [<ReactComponent>]
@@ -584,9 +584,9 @@ let update (msg: Msg) (state: State) : State * Cmd<Msg> =
             nextState, Cmd.map RSSMsg nextRSSCmd
     | AuthMsg(authMsg: Auth.Msg) ->
         match authMsg with
-        | Auth.LoginSuccess(loginResult: LoginResult option) ->
+        | Auth.LoginSuccess(loginResult: LoginSuccess option) ->
             match loginResult with
-            | Some(loginResult: LoginResult) ->
+            | Some(loginResult: LoginSuccess) ->
                 Session.setSessionId loginResult.SessionId
 
                 let (authState: Auth.State), _ = Auth.init ()

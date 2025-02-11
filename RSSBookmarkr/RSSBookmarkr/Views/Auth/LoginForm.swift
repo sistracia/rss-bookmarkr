@@ -1,14 +1,10 @@
 import SwiftUI
 
 struct LoginForm: View {
-    var onSucces: (() -> Void)?
+    var onSucces: (() -> Void)
     @Environment(ModelData.self) var modelData
     @State private var username = ""
     @State private var password = ""
-    
-    init(onSucces: (() -> Void)? = nil) {
-        self.onSucces = onSucces
-    }
     
     var body: some View {
         Form {
@@ -26,9 +22,7 @@ struct LoginForm: View {
                         try await modelData.setProfile(username: username, password: password)
                         username = ""
                         password = ""
-                        if let onSucces = onSucces {
-                            onSucces()
-                        }
+                        onSucces()
                     }
                 } label: {
                     Text("Log In")
@@ -43,6 +37,6 @@ struct LoginForm: View {
 }
 
 #Preview {
-    LoginForm()
+    LoginForm() {}
         .environment(ModelData())
 }

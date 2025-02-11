@@ -14,7 +14,7 @@ let rssListAction (rssQueryString: RSSQueryString) : HttpHandler =
             return! json rssList next ctx
         }
 
-let loginOrRegisterAction (loginForm: LoginForm) : HttpHandler =
+let loginOrRegisterAction (loginForm: LoginReq) : HttpHandler =
     fun (next: HttpFunc) (ctx: HttpContext) ->
         task {
             let! (loginResponse: LoginResponse) = (Handler.loginOrRegister ctx.RssDbConnectionString loginForm)

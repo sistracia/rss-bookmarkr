@@ -15,31 +15,31 @@ let getRSSList (urls: string array) : RSS seq Async =
             |> Seq.sortByDescending _.PublishDate
     }
 
-let register (connectionString: string) (sessionId: string) (loginForm: LoginForm) : LoginResponse =
+let register (connectionString: string) (sessionId: string) (loginForm: LoginReq) : LoginResponse =
     let userId: string = (DataAccess.insertUser connectionString loginForm)
 
-    let loginResult: LoginResult =
-        { LoginResult.UserId = userId
-          LoginResult.RssUrls = Array.empty
-          LoginResult.SessionId = sessionId
-          LoginResult.Email = "" }
+    let loginResult: LoginSuccess =
+        { LoginSuccess.UserId = userId
+          LoginSuccess.RssUrls = Array.empty
+          LoginSuccess.SessionId = sessionId
+          LoginSuccess.Email = "" }
 
     Success loginResult
 
-let login (connectionString: string) (sessionId: string) (loginForm: LoginForm) (user: User) : LoginResponse =
+let login (connectionString: string) (sessionId: string) (loginForm: LoginReq) (user: User) : LoginResponse =
     if user.Password = loginForm.Password then
-        let loginResult: LoginResult =
-            { LoginResult.UserId = user.Id
-              LoginResult.RssUrls = (DataAccess.getRSSUrls connectionString user.Id) |> List.toArray
-              LoginResult.SessionId = sessionId
-              LoginResult.Email = user.Email }
+        let loginResult: LoginSuccess =
+            { LoginSuccess.UserId = user.Id
+              LoginSuccess.RssUrls = (DataAccess.getRSSUrls connectionString user.Id) |> List.toArray
+              LoginSuccess.SessionId = sessionId
+              LoginSuccess.Email = user.Email }
 
         Success loginResult
     else
-        let loginError: LoginError = { LoginError.Message = "Password not match." }
+        let loginError: LoginFailed = { LoginFailed.Message = "Password not match." }
         Failed loginError
 
-let loginOrRegister (connectionString: string) (loginForm: LoginForm) : LoginResponse Async =
+let loginOrRegister (connectionString: string) (loginForm: LoginReq) : LoginResponse Async =
     async {
         let sessionId: string = Guid.NewGuid().ToString()
 
@@ -49,7 +49,7 @@ let loginOrRegister (connectionString: string) (loginForm: LoginForm) : LoginRes
             | Some(user: User) -> login connectionString sessionId loginForm user
 
         match loginResponse with
-        | Success(user: LoginResult) -> DataAccess.insertSession connectionString user.UserId sessionId
+        | Success(user: LoginSuccess) -> DataAccess.insertSession connectionString user.UserId sessionId
         | _ -> ()
 
         return loginResponse
@@ -82,14 +82,14 @@ let initLogin (connectionString: string) (initLoginReq: InitLoginReq) : LoginRes
             |> DataAccess.getUserSession connectionString
             |> (function
             | None ->
-                let loginError: LoginError = { LoginError.Message = "Session invalid." }
+                let loginError: LoginFailed = { LoginFailed.Message = "Session invalid." }
                 Failed loginError
             | Some(user: User) ->
-                let loginResult: LoginResult =
-                    { LoginResult.UserId = user.Id
-                      LoginResult.RssUrls = (DataAccess.getRSSUrls connectionString user.Id) |> List.toArray
-                      LoginResult.SessionId = initLoginReq.SessionId
-                      LoginResult.Email = user.Email }
+                let loginResult: LoginSuccess =
+                    { LoginSuccess.UserId = user.Id
+                      LoginSuccess.RssUrls = (DataAccess.getRSSUrls connectionString user.Id) |> List.toArray
+                      LoginSuccess.SessionId = initLoginReq.SessionId
+                      LoginSuccess.Email = user.Email }
 
                 Success loginResult)
     }

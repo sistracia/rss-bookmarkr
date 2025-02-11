@@ -7,7 +7,7 @@ open Npgsql.FSharp
 open Shared
 open Types
 
-let getUser (connectionString: string) (loginForm: LoginForm) : User option =
+let getUser (connectionString: string) (loginForm: LoginReq) : User option =
     connectionString
     |> Sql.connect
     |> Sql.query "SELECT id, username, password, COALESCE(email, '') as email FROM users WHERE username = @username"
@@ -19,7 +19,7 @@ let getUser (connectionString: string) (loginForm: LoginForm) : User option =
           User.Email = read.text "email" })
     |> List.tryHead
 
-let insertUser (connectionString: string) (loginForm: LoginForm) : string =
+let insertUser (connectionString: string) (loginForm: LoginReq) : string =
     let newUid: string = Guid.NewGuid().ToString()
 
     connectionString

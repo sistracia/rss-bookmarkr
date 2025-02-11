@@ -4,22 +4,27 @@ open System
 open Giraffe
 
 [<Struct>]
-type RSS =
-    { Origin: string
-      Title: string
-      PublishDate: DateTime
-      TimeAgo: string
-      Link: string }
+[<CLIMutable>]
+type InitLoginReq =
+    { SessionId: string }
 
-    member this.OriginHost = (Uri this.Origin).Host
+    override this.ToString() = sprintf "SessionId: %s" this.SessionId
 
-    member this.OriginHostUrl =
-        let uri = (Uri this.Origin)
-        sprintf $"{uri.Scheme}://{uri.Host}"
+    member this.HasErrors() =
+        if this.SessionId.Length <= 0 then
+            Some "UserId is required."
+        else
+            None
+
+    interface IModelValidation<InitLoginReq> with
+        member this.Validate() =
+            match this.HasErrors() with
+            | Some msg -> Error(RequestErrors.badRequest (text msg))
+            | None -> Ok this
 
 [<Struct>]
 [<CLIMutable>]
-type LoginForm =
+type LoginReq =
     { Username: string
       Password: string }
 
@@ -34,11 +39,39 @@ type LoginForm =
         else
             None
 
-    interface IModelValidation<LoginForm> with
+    interface IModelValidation<LoginReq> with
         member this.Validate() =
             match this.HasErrors() with
             | Some msg -> Error(RequestErrors.badRequest (text msg))
             | None -> Ok this
+
+[<Struct>]
+type LoginSuccess =
+    { UserId: string
+      RssUrls: string array
+      SessionId: string
+      Email: string }
+
+[<Struct>]
+type LoginFailed = { Message: string }
+
+type LoginResponse =
+    | Success of result: LoginSuccess
+    | Failed of error: LoginFailed
+
+[<Struct>]
+type RSS =
+    { Origin: string
+      Title: string
+      PublishDate: DateTime
+      TimeAgo: string
+      Link: string }
+
+    member this.OriginHost = (Uri this.Origin).Host
+
+    member this.OriginHostUrl =
+        let uri = (Uri this.Origin)
+        sprintf $"{uri.Scheme}://{uri.Host}"
 
 [<Struct>]
 [<CLIMutable>]
@@ -56,25 +89,6 @@ type SaveRSSUrlReq =
             None
 
     interface IModelValidation<SaveRSSUrlReq> with
-        member this.Validate() =
-            match this.HasErrors() with
-            | Some msg -> Error(RequestErrors.badRequest (text msg))
-            | None -> Ok this
-
-[<Struct>]
-[<CLIMutable>]
-type InitLoginReq =
-    { SessionId: string }
-
-    override this.ToString() = sprintf "SessionId: %s" this.SessionId
-
-    member this.HasErrors() =
-        if this.SessionId.Length <= 0 then
-            Some "UserId is required."
-        else
-            None
-
-    interface IModelValidation<InitLoginReq> with
         member this.Validate() =
             match this.HasErrors() with
             | Some msg -> Error(RequestErrors.badRequest (text msg))
@@ -121,26 +135,11 @@ type UnsubscribeReq =
             match this.HasErrors() with
             | Some msg -> Error(RequestErrors.badRequest (text msg))
             | None -> Ok this
-
-[<Struct>]
-type LoginResult =
-    { UserId: string
-      RssUrls: string array
-      SessionId: string
-      Email: string }
-
-[<Struct>]
-type LoginError = { Message: string }
-
-type LoginResponse =
-    | Success of result: LoginResult
-    | Failed of error: LoginError
-
 type IRPCStore =
-    { getRSSList: string array -> RSS seq Async
-      loginOrRegister: LoginForm -> LoginResponse Async
+    { initLogin: InitLoginReq -> LoginResponse Async
+      loginOrRegister: LoginReq -> LoginResponse Async
+      getRSSList: string array -> RSS seq Async
       saveRSSUrls: SaveRSSUrlReq -> unit Async
-      initLogin: InitLoginReq -> LoginResponse Async
       subscribe: SubscribeReq -> unit Async
       unsubscribe: UnsubscribeReq -> unit Async }
 

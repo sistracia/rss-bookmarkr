@@ -30,9 +30,7 @@ RUN dotnet publish src/Server -c Release -o publish
 # use the official Bun image
 # see all versions at https://hub.docker.com/r/oven/bun/tags
 FROM oven/bun:1 AS client-base
-RUN apt update
-RUN apt upgrade
-RUN apt install -y make
+RUN apt update && apt install -y make
 WORKDIR /Client
 
 # install dependencies into temp directory
