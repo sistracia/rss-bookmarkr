@@ -15,7 +15,7 @@ struct ContentView: View {
             .padding()
             .navigationTitle("RSS Bookmarkr")
             .toolbar{
-                if modelData.profile == nil {
+                if modelData.user == nil {
                     Button {
                         showLoginSheet.toggle()
                     } label: {
@@ -23,7 +23,7 @@ struct ContentView: View {
                     }
                 } else {
                     Button {
-                        modelData.unsetProfile()
+                        modelData.logout()
                     } label: {
                         Text("Log Out")
                     }

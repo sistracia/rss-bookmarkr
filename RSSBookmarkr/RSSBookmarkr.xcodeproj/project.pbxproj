@@ -27,7 +27,7 @@
 		EE9721CE2D5B447100B359B3 /* UnsubscribeRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9721CD2D5B446E00B359B3 /* UnsubscribeRequest.swift */; };
 		EEEA4F7C2C109771007CD9B8 /* LoginForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEEA4F7B2C109771007CD9B8 /* LoginForm.swift */; };
 		EEEA4F7F2C10B6FD007CD9B8 /* ModelData.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEEA4F7E2C10B6FD007CD9B8 /* ModelData.swift */; };
-		EEEA4F822C10B714007CD9B8 /* Profile.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEEA4F812C10B714007CD9B8 /* Profile.swift */; };
+		EEEA4F822C10B714007CD9B8 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEEA4F812C10B714007CD9B8 /* User.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -71,7 +71,7 @@
 		EE9721CD2D5B446E00B359B3 /* UnsubscribeRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnsubscribeRequest.swift; sourceTree = "<group>"; };
 		EEEA4F7B2C109771007CD9B8 /* LoginForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginForm.swift; sourceTree = "<group>"; };
 		EEEA4F7E2C10B6FD007CD9B8 /* ModelData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelData.swift; sourceTree = "<group>"; };
-		EEEA4F812C10B714007CD9B8 /* Profile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Profile.swift; sourceTree = "<group>"; };
+		EEEA4F812C10B714007CD9B8 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -187,7 +187,7 @@
 				EE9721BF2D5AF7C500B359B3 /* RSSError.swift */,
 				EE9721BD2D5AF5A600B359B3 /* RSS.swift */,
 				EEEA4F7E2C10B6FD007CD9B8 /* ModelData.swift */,
-				EEEA4F812C10B714007CD9B8 /* Profile.swift */,
+				EEEA4F812C10B714007CD9B8 /* User.swift */,
 				EE9721BB2D5AF20800B359B3 /* RSSBookmarkrClient.swift */,
 			);
 			path = Model;
@@ -327,7 +327,7 @@
 				EE9721CE2D5B447100B359B3 /* UnsubscribeRequest.swift in Sources */,
 				EE9721CA2D5B435C00B359B3 /* SaveRSSUrlRequest.swift in Sources */,
 				EE28ACD12C0F60FF00309C42 /* ContentView.swift in Sources */,
-				EEEA4F822C10B714007CD9B8 /* Profile.swift in Sources */,
+				EEEA4F822C10B714007CD9B8 /* User.swift in Sources */,
 				EE9721CC2D5B43DC00B359B3 /* SubscribeRequest.swift in Sources */,
 				EE9721C62D5B3CFE00B359B3 /* LoginRequest.swift in Sources */,
 				EE28ACF92C0F61C000309C42 /* test.swift in Sources */,

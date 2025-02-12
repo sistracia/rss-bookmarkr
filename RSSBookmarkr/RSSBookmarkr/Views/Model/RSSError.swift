@@ -1,6 +1,7 @@
 import Foundation
 
 enum RSSError: Error {
+    case unauthenticated
     case invalidURL
     case missingData
     case networkError
@@ -10,15 +11,17 @@ enum RSSError: Error {
 extension RSSError: LocalizedError {
     var errorDescription: String? {
         switch self {
+        case .unauthenticated:
+            return NSLocalizedString("Unauthenticated.", comment: "")
         case .invalidURL:
-            return NSLocalizedString("Invalid URL", comment: "")
+            return NSLocalizedString("Invalid URL.", comment: "")
         case .missingData:
             return NSLocalizedString("No data received.", comment: "")
         case .networkError:
             return NSLocalizedString("Network error.", comment: "")
         case .unexpectedError(error: let error):
             return NSLocalizedString(
-                "Unexpected error: \(error.localizedDescription)",
+                "Received unexpected error. \(error.localizedDescription)",
                 comment: ""
             )
         }

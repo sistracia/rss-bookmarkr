@@ -50,19 +50,19 @@ actor RSSBookmarkrClient {
         let response = try jsonDecoder.decode([RSS].self, from: data)
         return response
     }
-
+    
     func saveRSSUrls(request req: SaveRSSUrlRequest) async throws  {
         let body = try JSONSerialization.data(withJSONObject: [req])
-        let _ = try await request(endpoint: "saveRSSUrls", body: body)
+        _ = try await request(endpoint: "saveRSSUrls", body: body)
     }
     
     func subscribe(request req: SubscribeRequest) async throws {
         let body = try JSONSerialization.data(withJSONObject: [req])
-        let _ = try await request(endpoint: "subscribe", body: body)
+        _ = try await request(endpoint: "subscribe", body: body)
     }
     
     func unsubscribe(request req: UnsubscribeRequest) async throws {
         let body = try JSONSerialization.data(withJSONObject: [req])
-        let _ = try await request(endpoint: "unsubscribe", body: body)
+        _ = try await request(endpoint: "unsubscribe", body: body)
     }
 }

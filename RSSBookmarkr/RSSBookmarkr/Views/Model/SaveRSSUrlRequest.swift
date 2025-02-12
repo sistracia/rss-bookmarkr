@@ -2,7 +2,7 @@ import Foundation
 
 struct SaveRSSUrlRequest {
     let userId: String
-    let urls: [String]
+    let urls: [URL]
 }
 
 extension SaveRSSUrlRequest: Encodable {
