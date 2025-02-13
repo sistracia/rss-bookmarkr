@@ -15,6 +15,9 @@
 		EE28ACEA2C0F610000309C42 /* RSSBookmarkrUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE28ACE92C0F610000309C42 /* RSSBookmarkrUITests.swift */; };
 		EE28ACEC2C0F610000309C42 /* RSSBookmarkrUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE28ACEB2C0F610000309C42 /* RSSBookmarkrUITestsLaunchTests.swift */; };
 		EE28ACF92C0F61C000309C42 /* test.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE28ACF82C0F61C000309C42 /* test.swift */; };
+		EE6635922D5DB572000E0626 /* SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE6635912D5DB56D000E0626 /* SearchBar.swift */; };
+		EE6635942D5DB75D000E0626 /* RSSChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE6635932D5DB75D000E0626 /* RSSChip.swift */; };
+		EE6635962D5DB76B000E0626 /* RSSChipList.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE6635952D5DB76B000E0626 /* RSSChipList.swift */; };
 		EE9721BC2D5AF20800B359B3 /* RSSBookmarkrClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9721BB2D5AF20800B359B3 /* RSSBookmarkrClient.swift */; };
 		EE9721BE2D5AF5A900B359B3 /* RSS.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9721BD2D5AF5A600B359B3 /* RSS.swift */; };
 		EE9721C02D5AF7C900B359B3 /* RSSError.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9721BF2D5AF7C500B359B3 /* RSSError.swift */; };
@@ -59,6 +62,9 @@
 		EE28ACE92C0F610000309C42 /* RSSBookmarkrUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSBookmarkrUITests.swift; sourceTree = "<group>"; };
 		EE28ACEB2C0F610000309C42 /* RSSBookmarkrUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSBookmarkrUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		EE28ACF82C0F61C000309C42 /* test.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = test.swift; sourceTree = "<group>"; };
+		EE6635912D5DB56D000E0626 /* SearchBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBar.swift; sourceTree = "<group>"; };
+		EE6635932D5DB75D000E0626 /* RSSChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSChip.swift; sourceTree = "<group>"; };
+		EE6635952D5DB76B000E0626 /* RSSChipList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSChipList.swift; sourceTree = "<group>"; };
 		EE9721BB2D5AF20800B359B3 /* RSSBookmarkrClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSBookmarkrClient.swift; sourceTree = "<group>"; };
 		EE9721BD2D5AF5A600B359B3 /* RSS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSS.swift; sourceTree = "<group>"; };
 		EE9721BF2D5AF7C500B359B3 /* RSSError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSError.swift; sourceTree = "<group>"; };
@@ -122,6 +128,7 @@
 		EE28ACCD2C0F60FF00309C42 /* RSSBookmarkr */ = {
 			isa = PBXGroup;
 			children = (
+				EEEA4F7D2C10B6F1007CD9B8 /* Model */,
 				EEEA4F712C10634B007CD9B8 /* Views */,
 				EE28ACCE2C0F60FF00309C42 /* RSSBookmarkrApp.swift */,
 				EE28ACD22C0F610000309C42 /* Assets.xcassets */,
@@ -156,10 +163,20 @@
 			path = RSSBookmarkrUITests;
 			sourceTree = "<group>";
 		};
+		EE6635902D5DB4EB000E0626 /* RSS */ = {
+			isa = PBXGroup;
+			children = (
+				EE6635952D5DB76B000E0626 /* RSSChipList.swift */,
+				EE6635912D5DB56D000E0626 /* SearchBar.swift */,
+				EE6635932D5DB75D000E0626 /* RSSChip.swift */,
+			);
+			path = RSS;
+			sourceTree = "<group>";
+		};
 		EEEA4F712C10634B007CD9B8 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				EEEA4F7D2C10B6F1007CD9B8 /* Model */,
+				EE6635902D5DB4EB000E0626 /* RSS */,
 				EEEA4F7A2C109732007CD9B8 /* Auth */,
 				EE28ACD02C0F60FF00309C42 /* ContentView.swift */,
 			);
@@ -325,6 +342,8 @@
 			files = (
 				EE9721C42D5B103300B359B3 /* InitLoginRequest.swift in Sources */,
 				EE9721CE2D5B447100B359B3 /* UnsubscribeRequest.swift in Sources */,
+				EE6635962D5DB76B000E0626 /* RSSChipList.swift in Sources */,
+				EE6635942D5DB75D000E0626 /* RSSChip.swift in Sources */,
 				EE9721CA2D5B435C00B359B3 /* SaveRSSUrlRequest.swift in Sources */,
 				EE28ACD12C0F60FF00309C42 /* ContentView.swift in Sources */,
 				EEEA4F822C10B714007CD9B8 /* User.swift in Sources */,
@@ -338,6 +357,7 @@
 				EE9721C22D5B023900B359B3 /* RSSHTTPClient.swift in Sources */,
 				EE9721BC2D5AF20800B359B3 /* RSSBookmarkrClient.swift in Sources */,
 				EE28ACCF2C0F60FF00309C42 /* RSSBookmarkrApp.swift in Sources */,
+				EE6635922D5DB572000E0626 /* SearchBar.swift in Sources */,
 				EEEA4F7C2C109771007CD9B8 /* LoginForm.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

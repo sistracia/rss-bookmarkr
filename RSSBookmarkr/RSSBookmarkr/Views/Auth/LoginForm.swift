@@ -19,7 +19,7 @@ struct LoginForm: View {
             Section {
                 Button {
                     Task {
-                        try await modelData.setProfile(username: username, password: password)
+                        await modelData.login(username: username, password: password)
                         username = ""
                         password = ""
                         onSucces()
