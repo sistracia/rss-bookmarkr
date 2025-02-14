@@ -18,6 +18,9 @@
 		EE6635922D5DB572000E0626 /* SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE6635912D5DB56D000E0626 /* SearchBar.swift */; };
 		EE6635942D5DB75D000E0626 /* RSSChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE6635932D5DB75D000E0626 /* RSSChip.swift */; };
 		EE6635962D5DB76B000E0626 /* RSSChipList.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE6635952D5DB76B000E0626 /* RSSChipList.swift */; };
+		EE9164542D5ED82600A9F199 /* RSSCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9164532D5ED82600A9F199 /* RSSCard.swift */; };
+		EE9164572D5EDA2300A9F199 /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9164562D5EDA2300A9F199 /* FlowLayout.swift */; };
+		EE9164592D5EDB1600A9F199 /* Shimmer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9164582D5EDB1600A9F199 /* Shimmer.swift */; };
 		EE9721BC2D5AF20800B359B3 /* RSSBookmarkrClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9721BB2D5AF20800B359B3 /* RSSBookmarkrClient.swift */; };
 		EE9721BE2D5AF5A900B359B3 /* RSS.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9721BD2D5AF5A600B359B3 /* RSS.swift */; };
 		EE9721C02D5AF7C900B359B3 /* RSSError.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9721BF2D5AF7C500B359B3 /* RSSError.swift */; };
@@ -65,6 +68,9 @@
 		EE6635912D5DB56D000E0626 /* SearchBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBar.swift; sourceTree = "<group>"; };
 		EE6635932D5DB75D000E0626 /* RSSChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSChip.swift; sourceTree = "<group>"; };
 		EE6635952D5DB76B000E0626 /* RSSChipList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSChipList.swift; sourceTree = "<group>"; };
+		EE9164532D5ED82600A9F199 /* RSSCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSCard.swift; sourceTree = "<group>"; };
+		EE9164562D5EDA2300A9F199 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
+		EE9164582D5EDB1600A9F199 /* Shimmer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shimmer.swift; sourceTree = "<group>"; };
 		EE9721BB2D5AF20800B359B3 /* RSSBookmarkrClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSBookmarkrClient.swift; sourceTree = "<group>"; };
 		EE9721BD2D5AF5A600B359B3 /* RSS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSS.swift; sourceTree = "<group>"; };
 		EE9721BF2D5AF7C500B359B3 /* RSSError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSError.swift; sourceTree = "<group>"; };
@@ -169,13 +175,24 @@
 				EE6635952D5DB76B000E0626 /* RSSChipList.swift */,
 				EE6635912D5DB56D000E0626 /* SearchBar.swift */,
 				EE6635932D5DB75D000E0626 /* RSSChip.swift */,
+				EE9164532D5ED82600A9F199 /* RSSCard.swift */,
 			);
 			path = RSS;
+			sourceTree = "<group>";
+		};
+		EE9164552D5EDA0F00A9F199 /* Helper */ = {
+			isa = PBXGroup;
+			children = (
+				EE9164562D5EDA2300A9F199 /* FlowLayout.swift */,
+				EE9164582D5EDB1600A9F199 /* Shimmer.swift */,
+			);
+			path = Helper;
 			sourceTree = "<group>";
 		};
 		EEEA4F712C10634B007CD9B8 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				EE9164552D5EDA0F00A9F199 /* Helper */,
 				EE6635902D5DB4EB000E0626 /* RSS */,
 				EEEA4F7A2C109732007CD9B8 /* Auth */,
 				EE28ACD02C0F60FF00309C42 /* ContentView.swift */,
@@ -350,6 +367,7 @@
 				EE9721CC2D5B43DC00B359B3 /* SubscribeRequest.swift in Sources */,
 				EE9721C62D5B3CFE00B359B3 /* LoginRequest.swift in Sources */,
 				EE28ACF92C0F61C000309C42 /* test.swift in Sources */,
+				EE9164542D5ED82600A9F199 /* RSSCard.swift in Sources */,
 				EEEA4F7F2C10B6FD007CD9B8 /* ModelData.swift in Sources */,
 				EE9721C82D5B3F3000B359B3 /* LoginResponse.swift in Sources */,
 				EE9721C02D5AF7C900B359B3 /* RSSError.swift in Sources */,
@@ -358,7 +376,9 @@
 				EE9721BC2D5AF20800B359B3 /* RSSBookmarkrClient.swift in Sources */,
 				EE28ACCF2C0F60FF00309C42 /* RSSBookmarkrApp.swift in Sources */,
 				EE6635922D5DB572000E0626 /* SearchBar.swift in Sources */,
+				EE9164572D5EDA2300A9F199 /* FlowLayout.swift in Sources */,
 				EEEA4F7C2C109771007CD9B8 /* LoginForm.swift in Sources */,
+				EE9164592D5EDB1600A9F199 /* Shimmer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

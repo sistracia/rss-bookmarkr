@@ -2,7 +2,7 @@ import Foundation
 
 struct LoginSuccess {
     let userId: String
-    let rssUrls: [String]
+    let rssUrls: [URL]
     let sessionId: String
     let email: String
 }

@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct LoginForm: View {
+    @Binding var sessionId: String?
     var onSucces: (() -> Void)
+
     @Environment(ModelData.self) var modelData
     @State private var username = ""
     @State private var password = ""
@@ -12,6 +14,7 @@ struct LoginForm: View {
                 TextField(text: $username, prompt: Text("Username")) {
                     Text("Username")
                 }
+                .textInputAutocapitalization(.never)
                 SecureField(text: $password, prompt: Text("*****")) {
                     Text("Password")
                 }
@@ -20,6 +23,7 @@ struct LoginForm: View {
                 Button {
                     Task {
                         await modelData.login(username: username, password: password)
+                        sessionId = modelData.user?.sessionId
                         username = ""
                         password = ""
                         onSucces()
@@ -37,6 +41,6 @@ struct LoginForm: View {
 }
 
 #Preview {
-    LoginForm() {}
+    LoginForm(sessionId: .constant("")) {}
         .environment(ModelData())
 }

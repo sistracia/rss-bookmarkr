@@ -3,7 +3,7 @@ import Foundation
 struct RSS  {
     let origin: String
     let title: String
-    let publishDate: String
+    let publishDate: Date
     let timeAgo: String
     let link: URL
     let originHost: String
@@ -24,7 +24,7 @@ extension RSS: Decodable {
         case originHost = "OriginHost"
         case originHostUrl = "OriginHostUrl"
     }
-    
+
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         let rawOrigin = try? values.decode(String.self, forKey: .origin)
@@ -35,9 +35,17 @@ extension RSS: Decodable {
         let rawOriginHost = try? values.decode(String.self, forKey: .originHost)
         let rawOriginHostUrl = try? values.decode(String.self, forKey: .originHostUrl)
         
+        let dateFormatter: DateFormatter = {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSS"
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            return formatter
+        }()
+
         guard let origin = rawOrigin,
               let title = rawTitle,
-              let publishDate = rawPublishDate,
+              let stringPublishDate = rawPublishDate,
+              let publishDate = dateFormatter.date(from: stringPublishDate),
               let timeAgo = rawTimeAgo,
               let link = rawLink,
               let originHost = rawOriginHost,
@@ -54,4 +62,16 @@ extension RSS: Decodable {
         self.originHost = originHost
         self.originHostUrl = originHostUrl
     }
+}
+
+extension RSS {
+    static let `placeholder`: RSS = RSS(
+        origin: "https://example.com/rss.xml",
+        title: "Lorem ipsum dolor sit amet",
+        publishDate: Date.now,
+        timeAgo: "9 hours ago",
+        link: URL(string:"https://example.com/rss.xml/lorem-ipsum-dolor-sit-amet")!,
+        originHost: "example.com",
+        originHostUrl: "https://example.com"
+    )
 }

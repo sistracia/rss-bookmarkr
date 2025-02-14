@@ -50,7 +50,7 @@ actor RSSBookmarkrClient {
     }
     
     func getRSSList(from urls: [URL]) async throws -> [RSS] {
-        let body = try jsonEncoder.encode(urls)
+        let body = try jsonEncoder.encode([urls])
         let data = try await request(endpoint: "getRSSList", body: body)
         let response = try jsonDecoder.decode([RSS].self, from: data)
         return response
@@ -67,7 +67,7 @@ actor RSSBookmarkrClient {
     }
     
     func unsubscribe(request req: UnsubscribeRequest) async throws {
-        let body = try jsonEncoder.encode( [req])
+        let body = try jsonEncoder.encode([req])
         _ = try await request(endpoint: "unsubscribe", body: body)
     }
 }

@@ -4,11 +4,23 @@ struct ContentView: View {
     @Environment(ModelData.self) var modelData
     @State private var showLoginSheet = false
     
+    @AppStorage("sessionId") var sessionId: String?
+    
+    
     var body: some View {
-        NavigationStack {
+        let loading = modelData.serverState == .loading
+        
+        return NavigationStack {
             VStack {
-                SearchBar()
-                Spacer()
+                ScrollView {
+                    SearchBar()
+                    ForEach(modelData.rssList) { rssItem in
+                        RSSCard(rss: rssItem)
+                            .redacted(reason: loading ? .placeholder : [])
+                            .shimmer(show: loading)
+                    }
+                }
+                .padding(.horizontal, 5)
             }
             .navigationTitle("RSS Bookmarkr")
             .toolbar{
@@ -21,6 +33,7 @@ struct ContentView: View {
                 } else {
                     Button {
                         modelData.logout()
+                        sessionId = modelData.user?.userId
                     } label: {
                         Text("Log Out")
                     }
@@ -28,11 +41,16 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showLoginSheet) {
                 NavigationStack {
-                    LoginForm {
+                    LoginForm(sessionId: $sessionId) {
                         showLoginSheet.toggle()
                     }
                 }
                 .presentationDetents([.height(200)])
+            }
+        }
+        .task {
+            if let sessionId = sessionId {
+                await modelData.initUser(sessionId: sessionId)
             }
         }
     }
@@ -66,6 +84,14 @@ struct ContentView: View {
         URL(string: "https://overreacted.io/rss.xml")!,
         URL(string: "https://medium.com/feed/better-programming")!,
         URL(string: "https://blog.twitter.com/engineering/en_us/blog.rss")!,
+    ]
+    modelData.rssList = [
+        .placeholder,
+        .placeholder,
+        .placeholder,
+        .placeholder,
+        .placeholder,
+        .placeholder
     ]
     return ContentView().environment(modelData)
 }

@@ -33,15 +33,13 @@ struct SearchBar: View {
             }
             .padding(5)
             
-            ScrollView {
-                RSSChipList().padding(2)
-            }
+            RSSChipList().padding(2)
         }
     }
 }
 
 #Preview {
-    let modelData = ModelData()
+    @Previewable @State var modelData = ModelData()
     modelData.urls = [
         URL(string: "https://a")!,
         URL(string: "https://b.com")!,
