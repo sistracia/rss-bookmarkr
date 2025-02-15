@@ -3,27 +3,78 @@ import SwiftUI
 struct ContentView: View {
     @Environment(ModelData.self) var modelData
     @State private var showLoginSheet = false
-    
+    @State private var showSubscriptionSheet = false
+
     @AppStorage("sessionId") var sessionId: String?
-    
-    
+
+    var error: (Bool, String) {
+        switch modelData.serverState {
+        case .error(let error):
+            return (true, error)
+        default:
+            return (false, "")
+        }
+    }
+
+    var isLoading: Bool {
+        modelData.serverState == .loading
+    }
+
     var body: some View {
-        let loading = modelData.serverState == .loading
-        
-        return NavigationStack {
+        let showError: Binding = Binding(
+            get: {
+                return self.error.0
+            },
+            set: { showError in
+                modelData.serverState = .idle
+            }
+        )
+
+        NavigationStack {
             VStack {
                 ScrollView {
                     SearchBar()
+                    if let user = modelData.user {
+                        HStack(spacing: 25) {
+                            Button {
+                                Task {
+                                    await modelData.saveUrls()
+                                }
+                            } label: {
+                                Text("Save Urls")
+                            }
+
+                            if user.email == "" {
+                                Button {
+                                    showSubscriptionSheet.toggle()
+                                } label: {
+                                    Text("Subscribe")
+                                }
+                            } else {
+                                Button {
+                                    Task {
+                                        await modelData.unsubscribe()
+                                    }
+                                } label: {
+                                    Text("Unsubscribe")
+                                }
+                            }
+
+                            Spacer()
+                        }
+                        .padding()
+                    }
+
                     ForEach(modelData.rssList) { rssItem in
                         RSSCard(rss: rssItem)
-                            .redacted(reason: loading ? .placeholder : [])
-                            .shimmer(show: loading)
+                            .redacted(reason: isLoading ? .placeholder : [])
+                            .shimmer(show: isLoading)
                     }
                 }
                 .padding(.horizontal, 5)
             }
             .navigationTitle("RSS Bookmarkr")
-            .toolbar{
+            .toolbar {
                 if modelData.user == nil {
                     Button {
                         showLoginSheet.toggle()
@@ -41,12 +92,28 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showLoginSheet) {
                 NavigationStack {
-                    LoginForm(sessionId: $sessionId) {
-                        showLoginSheet.toggle()
+                    LoginForm { username, password in
+                        Task {
+                            await modelData.login(
+                                username: username, password: password)
+                            showLoginSheet.toggle()
+                        }
                     }
                 }
                 .presentationDetents([.height(200)])
             }
+            .sheet(isPresented: $showSubscriptionSheet) {
+                NavigationStack {
+                    SubscriptionForm { email in
+                        Task {
+                            await modelData.subscribe(email: email)
+                            showSubscriptionSheet.toggle()
+                        }
+                    }
+                }
+                .presentationDetents([.height(125)])
+            }
+            .toast(message: error.1, isShowing: showError)
         }
         .task {
             if let sessionId = sessionId {
@@ -56,8 +123,10 @@ struct ContentView: View {
     }
 }
 
-#Preview {
+#Preview("Logged In") {
     @Previewable @State var modelData = ModelData()
+    modelData.user = User(
+        userId: "userId", sessionId: "sessionId", email: "email@example.com")
     modelData.urls = [
         URL(string: "https://a")!,
         URL(string: "https://b.com")!,
@@ -91,7 +160,12 @@ struct ContentView: View {
         .placeholder,
         .placeholder,
         .placeholder,
-        .placeholder
+        .placeholder,
     ]
+    return ContentView().environment(modelData)
+}
+
+#Preview("Logged Out") {
+    @Previewable @State var modelData = ModelData()
     return ContentView().environment(modelData)
 }

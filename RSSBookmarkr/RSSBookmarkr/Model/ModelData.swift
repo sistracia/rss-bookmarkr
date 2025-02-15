@@ -21,7 +21,12 @@ class ModelData {
         self.rssBookrmarkrClient = rssBookrmarkrClient
     }
     
-    func serverCall<T>(defaultReturn: T, callback: () async throws -> T) async -> T {
+    func serverCall<T>(defaultReturn: T, retryDelay: Duration = .seconds(2), callback: () async throws -> T) async -> T {
+        if serverState != .idle {
+            try? await Task.sleep(for: retryDelay)
+            return await serverCall(defaultReturn: defaultReturn, callback: callback)
+        }
+
         serverState = .loading
         do {
             let result = try await callback()
@@ -54,13 +59,19 @@ class ModelData {
     }
     
     func initUser(sessionId: String) async {
-        if let loginResponse = try? await rssBookrmarkrClient.initLogin(request:  InitLoginRequest(sessionId: sessionId)) {
+        let loginResponse = await serverCall(defaultReturn: nil) {
+            try await self.rssBookrmarkrClient.initLogin(request:  InitLoginRequest(sessionId: sessionId))
+        }
+        if let loginResponse = loginResponse {
             loginSuccess(loginResponse: loginResponse)
         }
     }
     
     func login(username: String, password: String) async {
-        if let loginResponse = try? await rssBookrmarkrClient.loginOrRegister(request:  LoginRequest(username: username, password: password)) {
+        let loginResponse = await serverCall(defaultReturn: nil) {
+            try await self.rssBookrmarkrClient.loginOrRegister(request:  LoginRequest(username: username, password: password))
+        }
+        if let loginResponse = loginResponse {
             loginSuccess(loginResponse: loginResponse)
         }
     }
@@ -70,11 +81,13 @@ class ModelData {
     }
     
     func protectedResource<T>(defaultReturn: T, callback: (User) async throws -> T) async -> T {
-        if let user = self.user, let result = try? await callback(user) {
-            return result
-        } else {
-            self.serverState = .error(RSSError.unauthenticated.localizedDescription)
-            return defaultReturn
+        return await serverCall(defaultReturn: defaultReturn) {
+            if let user = self.user, let result = try? await callback(user) {
+                return result
+            } else {
+                self.serverState = .error(RSSError.unauthenticated.localizedDescription)
+                return defaultReturn
+            }
         }
     }
     
@@ -114,14 +127,16 @@ class ModelData {
         }
     }
     
-    func subscribe() async {
+    func subscribe(email: String) async {
         await protectedResource(defaultReturn: ()) { user in
-            try await rssBookrmarkrClient.subscribe(request: SubscribeRequest(userId: user.userId, email: user.email))
+            self.user = User(userId: user.userId, sessionId: user.sessionId, email: email)
+            try await rssBookrmarkrClient.subscribe(request: SubscribeRequest(userId: user.userId, email: email))
         }
     }
     
     func unsubscribe() async {
         await protectedResource(defaultReturn: ()) { user in
+            self.user = User(userId: user.userId, sessionId: user.sessionId, email: "")
             try await rssBookrmarkrClient.unsubscribe(request: UnsubscribeRequest(email: user.email))
         }
     }

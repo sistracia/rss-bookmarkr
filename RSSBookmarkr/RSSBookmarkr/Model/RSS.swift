@@ -35,12 +35,12 @@ extension RSS: Decodable {
         let rawOriginHost = try? values.decode(String.self, forKey: .originHost)
         let rawOriginHostUrl = try? values.decode(String.self, forKey: .originHostUrl)
         
-        let dateFormatter: DateFormatter = {
+        var dateFormatter: DateFormatter {
             let formatter = DateFormatter()
             formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSS"
             formatter.locale = Locale(identifier: "en_US_POSIX")
             return formatter
-        }()
+        }
 
         guard let origin = rawOrigin,
               let title = rawTitle,

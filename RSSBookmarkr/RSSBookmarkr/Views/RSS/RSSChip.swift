@@ -21,8 +21,7 @@ struct RSSChip: View {
             Text(label)
                 .foregroundStyle(.background)
         }
-        .padding(.vertical, 2)
-        .padding(.horizontal, 4)
+        .padding(4)
         .background(.foreground)
         .clipShape(.buttonBorder)
     }

@@ -1,10 +1,8 @@
 import SwiftUI
 
 struct LoginForm: View {
-    @Binding var sessionId: String?
-    var onSucces: (() -> Void)
-
-    @Environment(ModelData.self) var modelData
+    var onLogIn: ((String, String) -> Void)
+    
     @State private var username = ""
     @State private var password = ""
     
@@ -21,13 +19,7 @@ struct LoginForm: View {
             }
             Section {
                 Button {
-                    Task {
-                        await modelData.login(username: username, password: password)
-                        sessionId = modelData.user?.sessionId
-                        username = ""
-                        password = ""
-                        onSucces()
-                    }
+                    onLogIn(username, password)
                 } label: {
                     Text("Log In")
                 }
@@ -41,6 +33,5 @@ struct LoginForm: View {
 }
 
 #Preview {
-    LoginForm(sessionId: .constant("")) {}
-        .environment(ModelData())
+    LoginForm { _, __ in }
 }
