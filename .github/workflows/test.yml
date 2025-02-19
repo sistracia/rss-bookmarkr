@@ -5,14 +5,13 @@ on:
     branches:
       - "**"
 
-defaults:
-  run:
-    working-directory: ./web
-
 jobs:
   test-web:
     timeout-minutes: 60
     runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: ./web
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -62,15 +61,19 @@ jobs:
         with:
           dotnet-version: 8.x
       - name: Setup end-to-end testing
+        working-directory: ./web
         run: make test_e2e_setup
       - name: Wait for the apps in docker healthy
+        working-directory: ./web
         run: timeout 60s sh -c 'until docker ps | grep rss-bookmarkr-web | grep -q healthy; do echo "Waiting for container to be healthy..."; sleep 2; done'
       - name: Restore dotnet tool & dependency
+        working-directory: ./web
         run: |
           dotnet tool restore
           dotnet restore
           dotnet paket restore
       - name: Migrate database schema
+        working-directory: ./web
         run: |
           mv migrondi.e2e.json migrondi.json
           make migrate_up
@@ -80,4 +83,5 @@ jobs:
           xcodebuild test -scheme RSSBookmarkr -sdk iphonesimulator -destination "platform=iOS Simulator,OS=17.5,name=iPhone 15"
       - name: Teardown end-to-end testing
         if: always()
+        working-directory: ./web
         run: make test_e2e_teardown
