@@ -11,10 +11,9 @@
 		EE28ACD12C0F60FF00309C42 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE28ACD02C0F60FF00309C42 /* ContentView.swift */; };
 		EE28ACD32C0F610000309C42 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EE28ACD22C0F610000309C42 /* Assets.xcassets */; };
 		EE28ACD62C0F610000309C42 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EE28ACD52C0F610000309C42 /* Preview Assets.xcassets */; };
-		EE28ACE02C0F610000309C42 /* RSSBookmarkrTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE28ACDF2C0F610000309C42 /* RSSBookmarkrTests.swift */; };
 		EE28ACEA2C0F610000309C42 /* RSSBookmarkrUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE28ACE92C0F610000309C42 /* RSSBookmarkrUITests.swift */; };
-		EE28ACEC2C0F610000309C42 /* RSSBookmarkrUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE28ACEB2C0F610000309C42 /* RSSBookmarkrUITestsLaunchTests.swift */; };
-		EE28ACF92C0F61C000309C42 /* test.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE28ACF82C0F61C000309C42 /* test.swift */; };
+		EE29365F2D641F840032D9C5 /* Config.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = EE29365E2D641F840032D9C5 /* Config.xcconfig */; };
+		EE2936602D641F840032D9C5 /* Config.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = EE29365E2D641F840032D9C5 /* Config.xcconfig */; };
 		EE612E582D602A30007C31FD /* SubscriptionForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE612E572D602A30007C31FD /* SubscriptionForm.swift */; };
 		EE612E5A2D602DD6007C31FD /* Toast.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE612E592D602DD4007C31FD /* Toast.swift */; };
 		EE6635922D5DB572000E0626 /* SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE6635912D5DB56D000E0626 /* SearchBar.swift */; };
@@ -39,13 +38,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		EE28ACDC2C0F610000309C42 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = EE28ACC32C0F60FF00309C42 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = EE28ACCA2C0F60FF00309C42;
-			remoteInfo = RSSBookmarkr;
-		};
 		EE28ACE62C0F610000309C42 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = EE28ACC32C0F60FF00309C42 /* Project object */;
@@ -61,12 +53,9 @@
 		EE28ACD02C0F60FF00309C42 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		EE28ACD22C0F610000309C42 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		EE28ACD52C0F610000309C42 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
-		EE28ACDB2C0F610000309C42 /* RSSBookmarkrTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RSSBookmarkrTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		EE28ACDF2C0F610000309C42 /* RSSBookmarkrTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSBookmarkrTests.swift; sourceTree = "<group>"; };
 		EE28ACE52C0F610000309C42 /* RSSBookmarkrUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RSSBookmarkrUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		EE28ACE92C0F610000309C42 /* RSSBookmarkrUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSBookmarkrUITests.swift; sourceTree = "<group>"; };
-		EE28ACEB2C0F610000309C42 /* RSSBookmarkrUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSBookmarkrUITestsLaunchTests.swift; sourceTree = "<group>"; };
-		EE28ACF82C0F61C000309C42 /* test.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = test.swift; sourceTree = "<group>"; };
+		EE29365E2D641F840032D9C5 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		EE612E572D602A30007C31FD /* SubscriptionForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionForm.swift; sourceTree = "<group>"; };
 		EE612E592D602DD4007C31FD /* Toast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Toast.swift; sourceTree = "<group>"; };
 		EE6635912D5DB56D000E0626 /* SearchBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBar.swift; sourceTree = "<group>"; };
@@ -98,13 +87,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		EE28ACD82C0F610000309C42 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		EE28ACE22C0F610000309C42 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -119,7 +101,6 @@
 			isa = PBXGroup;
 			children = (
 				EE28ACCD2C0F60FF00309C42 /* RSSBookmarkr */,
-				EE28ACDE2C0F610000309C42 /* RSSBookmarkrTests */,
 				EE28ACE82C0F610000309C42 /* RSSBookmarkrUITests */,
 				EE28ACCC2C0F60FF00309C42 /* Products */,
 			);
@@ -129,7 +110,6 @@
 			isa = PBXGroup;
 			children = (
 				EE28ACCB2C0F60FF00309C42 /* RSSBookmarkr.app */,
-				EE28ACDB2C0F610000309C42 /* RSSBookmarkrTests.xctest */,
 				EE28ACE52C0F610000309C42 /* RSSBookmarkrUITests.xctest */,
 			);
 			name = Products;
@@ -143,7 +123,7 @@
 				EE28ACCE2C0F60FF00309C42 /* RSSBookmarkrApp.swift */,
 				EE28ACD22C0F610000309C42 /* Assets.xcassets */,
 				EE28ACD42C0F610000309C42 /* Preview Content */,
-				EE28ACF82C0F61C000309C42 /* test.swift */,
+				EE29365E2D641F840032D9C5 /* Config.xcconfig */,
 			);
 			path = RSSBookmarkr;
 			sourceTree = "<group>";
@@ -156,19 +136,10 @@
 			path = "Preview Content";
 			sourceTree = "<group>";
 		};
-		EE28ACDE2C0F610000309C42 /* RSSBookmarkrTests */ = {
-			isa = PBXGroup;
-			children = (
-				EE28ACDF2C0F610000309C42 /* RSSBookmarkrTests.swift */,
-			);
-			path = RSSBookmarkrTests;
-			sourceTree = "<group>";
-		};
 		EE28ACE82C0F610000309C42 /* RSSBookmarkrUITests */ = {
 			isa = PBXGroup;
 			children = (
 				EE28ACE92C0F610000309C42 /* RSSBookmarkrUITests.swift */,
-				EE28ACEB2C0F610000309C42 /* RSSBookmarkrUITestsLaunchTests.swift */,
 			);
 			path = RSSBookmarkrUITests;
 			sourceTree = "<group>";
@@ -253,24 +224,6 @@
 			productReference = EE28ACCB2C0F60FF00309C42 /* RSSBookmarkr.app */;
 			productType = "com.apple.product-type.application";
 		};
-		EE28ACDA2C0F610000309C42 /* RSSBookmarkrTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = EE28ACF22C0F610000309C42 /* Build configuration list for PBXNativeTarget "RSSBookmarkrTests" */;
-			buildPhases = (
-				EE28ACD72C0F610000309C42 /* Sources */,
-				EE28ACD82C0F610000309C42 /* Frameworks */,
-				EE28ACD92C0F610000309C42 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				EE28ACDD2C0F610000309C42 /* PBXTargetDependency */,
-			);
-			name = RSSBookmarkrTests;
-			productName = RSSBookmarkrTests;
-			productReference = EE28ACDB2C0F610000309C42 /* RSSBookmarkrTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
 		EE28ACE42C0F610000309C42 /* RSSBookmarkrUITests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = EE28ACF52C0F610000309C42 /* Build configuration list for PBXNativeTarget "RSSBookmarkrUITests" */;
@@ -302,10 +255,6 @@
 					EE28ACCA2C0F60FF00309C42 = {
 						CreatedOnToolsVersion = 15.4;
 					};
-					EE28ACDA2C0F610000309C42 = {
-						CreatedOnToolsVersion = 15.4;
-						TestTargetID = EE28ACCA2C0F60FF00309C42;
-					};
 					EE28ACE42C0F610000309C42 = {
 						CreatedOnToolsVersion = 15.4;
 						TestTargetID = EE28ACCA2C0F60FF00309C42;
@@ -326,7 +275,6 @@
 			projectRoot = "";
 			targets = (
 				EE28ACCA2C0F60FF00309C42 /* RSSBookmarkr */,
-				EE28ACDA2C0F610000309C42 /* RSSBookmarkrTests */,
 				EE28ACE42C0F610000309C42 /* RSSBookmarkrUITests */,
 			);
 		};
@@ -338,14 +286,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				EE28ACD62C0F610000309C42 /* Preview Assets.xcassets in Resources */,
+				EE29365F2D641F840032D9C5 /* Config.xcconfig in Resources */,
 				EE28ACD32C0F610000309C42 /* Assets.xcassets in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		EE28ACD92C0F610000309C42 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -353,6 +295,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EE2936602D641F840032D9C5 /* Config.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -373,7 +316,6 @@
 				EEEA4F822C10B714007CD9B8 /* User.swift in Sources */,
 				EE9721CC2D5B43DC00B359B3 /* SubscribeRequest.swift in Sources */,
 				EE9721C62D5B3CFE00B359B3 /* LoginRequest.swift in Sources */,
-				EE28ACF92C0F61C000309C42 /* test.swift in Sources */,
 				EE9164542D5ED82600A9F199 /* RSSCard.swift in Sources */,
 				EEEA4F7F2C10B6FD007CD9B8 /* ModelData.swift in Sources */,
 				EE9721C82D5B3F3000B359B3 /* LoginResponse.swift in Sources */,
@@ -390,19 +332,10 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		EE28ACD72C0F610000309C42 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				EE28ACE02C0F610000309C42 /* RSSBookmarkrTests.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		EE28ACE12C0F610000309C42 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				EE28ACEC2C0F610000309C42 /* RSSBookmarkrUITestsLaunchTests.swift in Sources */,
 				EE28ACEA2C0F610000309C42 /* RSSBookmarkrUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -410,11 +343,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		EE28ACDD2C0F610000309C42 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = EE28ACCA2C0F60FF00309C42 /* RSSBookmarkr */;
-			targetProxy = EE28ACDC2C0F610000309C42 /* PBXContainerItemProxy */;
-		};
 		EE28ACE72C0F610000309C42 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = EE28ACCA2C0F60FF00309C42 /* RSSBookmarkr */;
@@ -598,42 +526,6 @@
 			};
 			name = Release;
 		};
-		EE28ACF32C0F610000309C42 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.5;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sistracia.RSSBookmarkrTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RSSBookmarkr.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RSSBookmarkr";
-			};
-			name = Debug;
-		};
-		EE28ACF42C0F610000309C42 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.5;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sistracia.RSSBookmarkrTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RSSBookmarkr.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RSSBookmarkr";
-			};
-			name = Release;
-		};
 		EE28ACF62C0F610000309C42 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -683,15 +575,6 @@
 			buildConfigurations = (
 				EE28ACF02C0F610000309C42 /* Debug */,
 				EE28ACF12C0F610000309C42 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		EE28ACF22C0F610000309C42 /* Build configuration list for PBXNativeTarget "RSSBookmarkrTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				EE28ACF32C0F610000309C42 /* Debug */,
-				EE28ACF42C0F610000309C42 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

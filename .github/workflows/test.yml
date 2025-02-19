@@ -12,7 +12,7 @@ defaults:
     working-directory: ./web
 
 jobs:
-  test:
+  test-web:
     timeout-minutes: 60
     runs-on: ubuntu-22.04
     steps:
@@ -24,7 +24,8 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.x
-      - name: Setup Bun
+      - 
+	name: Setup Bun
         uses: oven-sh/setup-bun@v1 
         with:
           bun-version: 1.0.35
@@ -59,6 +60,45 @@ jobs:
       - 
         name: Run Playwright tests
         run: PAGE_URL=http://localhost:8080 bunx playwright test --reporter list
+      - 
+        name: Teardown end-to-end testing
+        if: always()
+        run: make test_e2e_teardown
+
+  test-ios:
+    timeout-minutes: 60
+    runs-on: macos-14
+    steps:
+      - 
+        name: Checkout
+        uses: actions/checkout@v4
+      - 
+        name: Setup dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.x
+      -
+        name: Setup end-to-end testing
+        run: make test_e2e_setup
+      - 
+        name: Wait for the apps in docker healthy
+        run: timeout 60s sh -c 'until docker ps | grep rss-bookmarkr-web | grep -q healthy; do echo "Waiting for container to be healthy..."; sleep 2; done'
+      -
+        name: Restore dotnet tool & dependency
+        run: |
+          dotnet tool restore
+          dotnet restore
+          dotnet paket restore
+      -
+        name: Migrate database schema
+        run: | 
+          mv migrondi.e2e.json migrondi.json
+          make migrate_up
+      -
+	name: Run xcode test
+	working-directory: ./RSSBookmarkr
+	run: |
+	  xcodebuild test -scheme RSSBookmarkr -sdk iphonesimulator -destination "platform=iOS Simulator,OS=17.5,name=iPhone 15"
       - 
         name: Teardown end-to-end testing
         if: always()
