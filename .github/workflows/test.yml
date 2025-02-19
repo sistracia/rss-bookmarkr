@@ -5,6 +5,7 @@ on:
     branches:
       - "**"
 
+jobs:
   test-web:
     timeout-minutes: 60
     runs-on: ubuntu-22.04
