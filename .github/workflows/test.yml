@@ -62,7 +62,7 @@ jobs:
       - name: List available Xcode versions
         run: ls /Applications | grep Xcode
       - name: Set up Xcode version
-        run: xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
       - name: List runtimes
         run: xcrun simctl list runtimes
       - name: Download runtime
