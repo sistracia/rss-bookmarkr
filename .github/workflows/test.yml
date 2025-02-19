@@ -62,20 +62,14 @@ jobs:
       - name: List available Xcode versions
         run: ls /Applications | grep Xcode
       - name: Set up Xcode version
-        run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+        run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
       - name: Check Xcode Command Line Tools
         run: xcrun --version
       - name: Check Available Simulator Runtimes
         run: xcrun simctl list runtimes
-      - name: Download the iOS 18.2 Simulator Runtime
-        run: xcodebuild -downloadPlatform iOS -exportPath ios_18.2_runtime.dmg
-      - name: Install the iOS 18.2 Simulator Runtime
-        run: xcodebuild -importPlatform ios_18.2_runtime.dmg
-      - name: Verify the Install
-        run: xcrun simctl list runtimes
-      - name: Create a Simulator with the Downloaded Runtime
-        run: xcrun simctl create "iPhone 16 Pro iOS 18.2" "com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro" "com.apple.CoreSimulator.SimRuntime.iOS-18-2"
+      - name: Check Available Simulator Devices
+        run: xcrun simctl list devices
       - name: Show current version of Xcode
         run: xcodebuild -version
       - name: Run xcode test
-        run: xcodebuild test -scheme RSSBookmarkr -sdk iphonesimulator -destination "platform=iOS Simulator,OS=18.2,name=iPhone 16 Pro"
+        run: xcodebuild test -scheme RSSBookmarkr -sdk iphonesimulator -destination "platform=iOS Simulator,OS=18.1,name=iPhone 15"
