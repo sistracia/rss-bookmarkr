@@ -91,7 +91,7 @@ jobs:
           xcodebuild clean archive \
             -scheme RSSBookmarkr \
             -configuration Release \
-            -sdk iphoneos18.2 \
+            -sdk iphoneos18.1 \
             -destination generic/platform=iOS \
             -archivePath rssbookmarkr.xcarchive \
             CODE_SIGN_IDENTITY="" \
