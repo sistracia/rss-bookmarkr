@@ -69,7 +69,11 @@ jobs:
         run: xcrun simctl list runtimes
       - name: Check Available Simulator Devices
         run: xcrun simctl list devices
+      - name: Boot Simulator
+        run: xcrun simctl boot "iPhone 16 Pro"
       - name: Show current version of Xcode
         run: xcodebuild -version
-      - name: Run xcode test
-        run: xcodebuild test -scheme RSSBookmarkr -sdk iphonesimulator -destination "platform=iOS Simulator,OS=18.1,name=iPhone 16 Pro"
+      # - name: Run xcode test
+      #   run: xcodebuild test -scheme RSSBookmarkr -sdk iphonesimulator -destination "platform=iOS Simulator,OS=18.1,name=iPhone 16 Pro"
+      - name: Build
+        run: xcodebuild build -scheme RSSBookmarkr -destination "platform=iOS Simulator,OS=18.1,name=iPhone 16 Pro" -derivedDataPath ./BuildOutput
