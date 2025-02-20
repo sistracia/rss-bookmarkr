@@ -24,11 +24,11 @@ final class RSSBookmarkrUITests: XCTestCase {
     }
 
     func testLaunchPerformance() throws {
-//        if #available(iOS 17.0, *) {
-//            // This measures how long it takes to launch your application.
-//            measure(metrics: [XCTApplicationLaunchMetric()]) {
-//                XCUIApplication().launch()
-//            }
-//        }
+        if #available(iOS 18.0, *) {
+            // This measures how long it takes to launch your application.
+            measure(metrics: [XCTApplicationLaunchMetric()]) {
+                XCUIApplication().launch()
+            }
+        }
     }
 }
