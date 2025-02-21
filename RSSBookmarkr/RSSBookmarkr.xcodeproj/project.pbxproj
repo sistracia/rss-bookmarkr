@@ -12,10 +12,9 @@
 		EE28ACD32C0F610000309C42 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EE28ACD22C0F610000309C42 /* Assets.xcassets */; };
 		EE28ACD62C0F610000309C42 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EE28ACD52C0F610000309C42 /* Preview Assets.xcassets */; };
 		EE28ACEA2C0F610000309C42 /* RSSBookmarkrUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE28ACE92C0F610000309C42 /* RSSBookmarkrUITests.swift */; };
-		EE29365F2D641F840032D9C5 /* Config.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = EE29365E2D641F840032D9C5 /* Config.xcconfig */; };
-		EE2936602D641F840032D9C5 /* Config.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = EE29365E2D641F840032D9C5 /* Config.xcconfig */; };
 		EE612E582D602A30007C31FD /* SubscriptionForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE612E572D602A30007C31FD /* SubscriptionForm.swift */; };
 		EE612E5A2D602DD6007C31FD /* Toast.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE612E592D602DD4007C31FD /* Toast.swift */; };
+		EE62A24D2D6822BB00D6885E /* UITestingHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE62A24C2D6822B600D6885E /* UITestingHelper.swift */; };
 		EE6635922D5DB572000E0626 /* SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE6635912D5DB56D000E0626 /* SearchBar.swift */; };
 		EE6635942D5DB75D000E0626 /* RSSChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE6635932D5DB75D000E0626 /* RSSChip.swift */; };
 		EE6635962D5DB76B000E0626 /* RSSChipList.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE6635952D5DB76B000E0626 /* RSSChipList.swift */; };
@@ -32,6 +31,7 @@
 		EE9721CA2D5B435C00B359B3 /* SaveRSSUrlRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9721C92D5B435200B359B3 /* SaveRSSUrlRequest.swift */; };
 		EE9721CC2D5B43DC00B359B3 /* SubscribeRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9721CB2D5B43D900B359B3 /* SubscribeRequest.swift */; };
 		EE9721CE2D5B447100B359B3 /* UnsubscribeRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9721CD2D5B446E00B359B3 /* UnsubscribeRequest.swift */; };
+		EEC229102D6811C5002E9E9A /* RSSBookmarkrScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEC2290F2D6811BA002E9E9A /* RSSBookmarkrScreen.swift */; };
 		EEEA4F7C2C109771007CD9B8 /* LoginForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEEA4F7B2C109771007CD9B8 /* LoginForm.swift */; };
 		EEEA4F7F2C10B6FD007CD9B8 /* ModelData.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEEA4F7E2C10B6FD007CD9B8 /* ModelData.swift */; };
 		EEEA4F822C10B714007CD9B8 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEEA4F812C10B714007CD9B8 /* User.swift */; };
@@ -55,9 +55,9 @@
 		EE28ACD52C0F610000309C42 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		EE28ACE52C0F610000309C42 /* RSSBookmarkrUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RSSBookmarkrUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		EE28ACE92C0F610000309C42 /* RSSBookmarkrUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSBookmarkrUITests.swift; sourceTree = "<group>"; };
-		EE29365E2D641F840032D9C5 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		EE612E572D602A30007C31FD /* SubscriptionForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionForm.swift; sourceTree = "<group>"; };
 		EE612E592D602DD4007C31FD /* Toast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Toast.swift; sourceTree = "<group>"; };
+		EE62A24C2D6822B600D6885E /* UITestingHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestingHelper.swift; sourceTree = "<group>"; };
 		EE6635912D5DB56D000E0626 /* SearchBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBar.swift; sourceTree = "<group>"; };
 		EE6635932D5DB75D000E0626 /* RSSChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSChip.swift; sourceTree = "<group>"; };
 		EE6635952D5DB76B000E0626 /* RSSChipList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSChipList.swift; sourceTree = "<group>"; };
@@ -74,6 +74,7 @@
 		EE9721C92D5B435200B359B3 /* SaveRSSUrlRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveRSSUrlRequest.swift; sourceTree = "<group>"; };
 		EE9721CB2D5B43D900B359B3 /* SubscribeRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscribeRequest.swift; sourceTree = "<group>"; };
 		EE9721CD2D5B446E00B359B3 /* UnsubscribeRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnsubscribeRequest.swift; sourceTree = "<group>"; };
+		EEC2290F2D6811BA002E9E9A /* RSSBookmarkrScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSBookmarkrScreen.swift; sourceTree = "<group>"; };
 		EEEA4F7B2C109771007CD9B8 /* LoginForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginForm.swift; sourceTree = "<group>"; };
 		EEEA4F7E2C10B6FD007CD9B8 /* ModelData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelData.swift; sourceTree = "<group>"; };
 		EEEA4F812C10B714007CD9B8 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
@@ -118,12 +119,12 @@
 		EE28ACCD2C0F60FF00309C42 /* RSSBookmarkr */ = {
 			isa = PBXGroup;
 			children = (
+				EE62A24B2D6822A900D6885E /* UITesting */,
 				EEEA4F7D2C10B6F1007CD9B8 /* Model */,
 				EEEA4F712C10634B007CD9B8 /* Views */,
 				EE28ACCE2C0F60FF00309C42 /* RSSBookmarkrApp.swift */,
 				EE28ACD22C0F610000309C42 /* Assets.xcassets */,
 				EE28ACD42C0F610000309C42 /* Preview Content */,
-				EE29365E2D641F840032D9C5 /* Config.xcconfig */,
 			);
 			path = RSSBookmarkr;
 			sourceTree = "<group>";
@@ -139,9 +140,18 @@
 		EE28ACE82C0F610000309C42 /* RSSBookmarkrUITests */ = {
 			isa = PBXGroup;
 			children = (
+				EEC2290F2D6811BA002E9E9A /* RSSBookmarkrScreen.swift */,
 				EE28ACE92C0F610000309C42 /* RSSBookmarkrUITests.swift */,
 			);
 			path = RSSBookmarkrUITests;
+			sourceTree = "<group>";
+		};
+		EE62A24B2D6822A900D6885E /* UITesting */ = {
+			isa = PBXGroup;
+			children = (
+				EE62A24C2D6822B600D6885E /* UITestingHelper.swift */,
+			);
+			path = UITesting;
 			sourceTree = "<group>";
 		};
 		EE6635902D5DB4EB000E0626 /* RSS */ = {
@@ -286,7 +296,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				EE28ACD62C0F610000309C42 /* Preview Assets.xcassets in Resources */,
-				EE29365F2D641F840032D9C5 /* Config.xcconfig in Resources */,
 				EE28ACD32C0F610000309C42 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -295,7 +304,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				EE2936602D641F840032D9C5 /* Config.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -310,6 +318,7 @@
 				EE612E5A2D602DD6007C31FD /* Toast.swift in Sources */,
 				EE9721CE2D5B447100B359B3 /* UnsubscribeRequest.swift in Sources */,
 				EE6635962D5DB76B000E0626 /* RSSChipList.swift in Sources */,
+				EE62A24D2D6822BB00D6885E /* UITestingHelper.swift in Sources */,
 				EE6635942D5DB75D000E0626 /* RSSChip.swift in Sources */,
 				EE9721CA2D5B435C00B359B3 /* SaveRSSUrlRequest.swift in Sources */,
 				EE28ACD12C0F60FF00309C42 /* ContentView.swift in Sources */,
@@ -337,6 +346,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				EE28ACEA2C0F610000309C42 /* RSSBookmarkrUITests.swift in Sources */,
+				EEC229102D6811C5002E9E9A /* RSSBookmarkrScreen.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -483,8 +493,8 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -492,6 +502,10 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sistracia.RSSBookmarkr;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -511,8 +525,8 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -520,6 +534,10 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sistracia.RSSBookmarkr;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

@@ -21,6 +21,8 @@ struct SubscriptionForm: View {
                     Text("Subscribe")
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
+            } footer: {
+                Text("Email notification will be sent everyday.")
             }
         }
         .listSectionSpacing(8)

@@ -1,9 +1,7 @@
 import Foundation
 
 actor RSSBookmarkrClient {
-    private let baseURL = URL(
-        string: "https://rssbookmarkr.sistracia.com/rpc/IRPCStore/"
-    )!
+    private let baseURL: URL
     
     private let httpClient: any RSSHTTPClient
     
@@ -17,7 +15,8 @@ actor RSSBookmarkrClient {
         return jsonEncoder
     }()
     
-    init(httpClient: any RSSHTTPClient = URLSession.shared) {
+    init(baseURL: URL, httpClient: any RSSHTTPClient = URLSession.shared) {
+        self.baseURL = baseURL
         self.httpClient = httpClient
     }
     

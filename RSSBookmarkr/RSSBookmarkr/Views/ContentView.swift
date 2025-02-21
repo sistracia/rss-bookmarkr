@@ -4,9 +4,10 @@ struct ContentView: View {
     @Environment(ModelData.self) var modelData
     @State private var showLoginSheet = false
     @State private var showSubscriptionSheet = false
+    @State private var showSavedUrlToast = false
 
     @AppStorage("sessionId") var sessionId: String?
-
+    
     var error: (Bool, String) {
         switch modelData.serverState {
         case .error(let error):
@@ -15,11 +16,11 @@ struct ContentView: View {
             return (false, "")
         }
     }
-
+    
     var isLoading: Bool {
         modelData.serverState == .loading
     }
-
+    
     var body: some View {
         let showError: Binding = Binding(
             get: {
@@ -29,7 +30,7 @@ struct ContentView: View {
                 modelData.serverState = .idle
             }
         )
-
+        
         NavigationStack {
             VStack {
                 ScrollView {
@@ -39,11 +40,12 @@ struct ContentView: View {
                             Button {
                                 Task {
                                     await modelData.saveUrls()
+                                    showSavedUrlToast = true
                                 }
                             } label: {
                                 Text("Save Urls")
                             }
-
+                            
                             if user.email == "" {
                                 Button {
                                     showSubscriptionSheet.toggle()
@@ -59,12 +61,12 @@ struct ContentView: View {
                                     Text("Unsubscribe")
                                 }
                             }
-
+                            
                             Spacer()
                         }
                         .padding()
                     }
-
+                    
                     ForEach(modelData.rssList) { rssItem in
                         RSSCard(rss: rssItem)
                             .redacted(reason: isLoading ? .placeholder : [])
@@ -84,7 +86,7 @@ struct ContentView: View {
                 } else {
                     Button {
                         modelData.logout()
-                        sessionId = modelData.user?.userId
+                        sessionId = modelData.user?.sessionId
                     } label: {
                         Text("Log Out")
                     }
@@ -111,9 +113,10 @@ struct ContentView: View {
                         }
                     }
                 }
-                .presentationDetents([.height(125)])
+                .presentationDetents([.height(150)])
             }
             .toast(message: error.1, isShowing: showError)
+            .toast(message: "Urls saved successfully", isShowing: $showSavedUrlToast)
         }
         .task {
             if let sessionId = sessionId {
@@ -124,7 +127,7 @@ struct ContentView: View {
 }
 
 #Preview("Logged In") {
-    @Previewable @State var modelData = ModelData()
+    @Previewable @State var modelData = ModelData(rssBookrmarkrClient: RSSBookmarkrClient(baseURL: URL(string: "https://rssbookmarkr.sistracia.com/rpc/IRPCStore/")!))
     modelData.user = User(
         userId: "userId", sessionId: "sessionId", email: "email@example.com")
     modelData.urls = [
@@ -166,6 +169,6 @@ struct ContentView: View {
 }
 
 #Preview("Logged Out") {
-    @Previewable @State var modelData = ModelData()
+    @Previewable @State var modelData = ModelData(rssBookrmarkrClient: RSSBookmarkrClient(baseURL: URL(string: "https://rssbookmarkr.sistracia.com/rpc/IRPCStore/")!))
     return ContentView().environment(modelData)
 }

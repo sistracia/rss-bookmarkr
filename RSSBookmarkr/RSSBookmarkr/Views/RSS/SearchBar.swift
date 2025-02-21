@@ -10,6 +10,7 @@ struct SearchBar: View {
                 TextField(text: $url, prompt: Text(verbatim: "https://overreacted.io/rss.xml")) {
                     Text("Search URL")
                 }
+                .textInputAutocapitalization(.never)
                 .labelsHidden()
                 .padding()
                 .clipShape(
@@ -39,7 +40,7 @@ struct SearchBar: View {
 }
 
 #Preview {
-    @Previewable @State var modelData = ModelData()
+    @Previewable @State var modelData = ModelData(rssBookrmarkrClient: RSSBookmarkrClient(baseURL: URL(string: "https://rssbookmarkr.sistracia.com/rpc/IRPCStore/")!))
     modelData.urls = [
         URL(string: "https://a")!,
         URL(string: "https://b.com")!,

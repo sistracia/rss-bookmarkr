@@ -1,6 +1,6 @@
 import Foundation
 
-@Observable
+@MainActor @Observable
 class ModelData {
     var user: User?
     var urls: [URL] = []
@@ -17,7 +17,7 @@ class ModelData {
     
     let rssBookrmarkrClient: RSSBookmarkrClient
     
-    init(rssBookrmarkrClient: RSSBookmarkrClient = RSSBookmarkrClient()) {
+    init(rssBookrmarkrClient: RSSBookmarkrClient) {
         self.rssBookrmarkrClient = rssBookrmarkrClient
     }
     
@@ -26,7 +26,7 @@ class ModelData {
             try? await Task.sleep(for: retryDelay)
             return await serverCall(defaultReturn: defaultReturn, callback: callback)
         }
-
+        
         serverState = .loading
         do {
             let result = try await callback()
@@ -39,7 +39,7 @@ class ModelData {
         return defaultReturn
     }
     
-    func refreshRSSListAfterAction(callback: () -> Void) {
+    @MainActor func refreshRSSListAfterAction(callback: () -> Void) {
         callback()
         Task {
             await self.getRSSList(self.urls)

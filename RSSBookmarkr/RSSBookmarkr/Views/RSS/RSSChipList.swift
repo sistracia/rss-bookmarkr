@@ -15,7 +15,7 @@ struct RSSChipList: View {
 }
 
 #Preview {
-    let modelData = ModelData()
+    let modelData = ModelData(rssBookrmarkrClient: RSSBookmarkrClient(baseURL: URL(string: "https://rssbookmarkr.sistracia.com/rpc/IRPCStore/")!))
     modelData.urls = [
         URL(string: "https://a")!,
         URL(string: "https://b.com")!,
