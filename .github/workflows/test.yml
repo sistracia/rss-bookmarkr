@@ -69,6 +69,9 @@ jobs:
         run: xcrun simctl list runtimes
       - name: Check Available Simulator Devices
         run: xcrun simctl list devices
+      - name: Boot Simulator
+        run: |
+          xcrun simctl list devices -j | jq -r '.devices["com.apple.CoreSimulator.SimRuntime.iOS-18-1"][] | select(.name == "iPhone 16 Pro") | .udid' | xargs -I {} xcrun simctl boot {}
       - name: Show current version of Xcode
         run: xcodebuild -version
       - name: List available SDKs
