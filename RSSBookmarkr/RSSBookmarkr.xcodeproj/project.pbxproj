@@ -74,6 +74,7 @@
 		EE9721C92D5B435200B359B3 /* SaveRSSUrlRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveRSSUrlRequest.swift; sourceTree = "<group>"; };
 		EE9721CB2D5B43D900B359B3 /* SubscribeRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscribeRequest.swift; sourceTree = "<group>"; };
 		EE9721CD2D5B446E00B359B3 /* UnsubscribeRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnsubscribeRequest.swift; sourceTree = "<group>"; };
+		EE9ACFBD2D6C331800FC5899 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		EEC2290F2D6811BA002E9E9A /* RSSBookmarkrScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSBookmarkrScreen.swift; sourceTree = "<group>"; };
 		EEEA4F7B2C109771007CD9B8 /* LoginForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginForm.swift; sourceTree = "<group>"; };
 		EEEA4F7E2C10B6FD007CD9B8 /* ModelData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelData.swift; sourceTree = "<group>"; };
@@ -119,6 +120,7 @@
 		EE28ACCD2C0F60FF00309C42 /* RSSBookmarkr */ = {
 			isa = PBXGroup;
 			children = (
+				EE9ACFBD2D6C331800FC5899 /* Info.plist */,
 				EE62A24B2D6822A900D6885E /* UITesting */,
 				EEEA4F7D2C10B6F1007CD9B8 /* Model */,
 				EEEA4F712C10634B007CD9B8 /* Views */,
@@ -490,6 +492,7 @@
 				DEVELOPMENT_ASSET_PATHS = "\"RSSBookmarkr/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = RSSBookmarkr/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -522,6 +525,7 @@
 				DEVELOPMENT_ASSET_PATHS = "\"RSSBookmarkr/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = RSSBookmarkr/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

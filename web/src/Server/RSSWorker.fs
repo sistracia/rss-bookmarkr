@@ -85,7 +85,7 @@ type RSSProcessingService(connectionString: string, publicHost: string, mailServ
         let mailData =
             { Mail.MailData.EmailTextBody = textBody
               Mail.MailData.EmailHtmlBody = htmlBody
-              Mail.MailData.EmailSubject = "New RSS Release!"
+              Mail.MailData.EmailSubject = "New RSS Release"
               Mail.MailData.EmailRecipient = recipient }
 
         mailService.SendMail mailData

@@ -5,7 +5,7 @@ struct ContentView: View {
     @State private var showLoginSheet = false
     @State private var showSubscriptionSheet = false
     @State private var showSavedUrlToast = false
-
+    
     @AppStorage("sessionId") var sessionId: String?
     
     var error: (Bool, String) {
@@ -86,7 +86,7 @@ struct ContentView: View {
                 } else {
                     Button {
                         modelData.logout()
-                        sessionId = modelData.user?.sessionId
+                        sessionId = nil
                     } label: {
                         Text("Log Out")
                     }
@@ -98,6 +98,7 @@ struct ContentView: View {
                         Task {
                             await modelData.login(
                                 username: username, password: password)
+                            sessionId = modelData.user?.sessionId
                             showLoginSheet.toggle()
                         }
                     }
@@ -115,6 +116,7 @@ struct ContentView: View {
                 }
                 .presentationDetents([.height(150)])
             }
+            
             .toast(message: error.1, isShowing: showError)
             .toast(message: "Urls saved successfully", isShowing: $showSavedUrlToast)
         }
@@ -122,6 +124,7 @@ struct ContentView: View {
             if let sessionId = sessionId {
                 await modelData.initUser(sessionId: sessionId)
             }
+            
         }
     }
 }

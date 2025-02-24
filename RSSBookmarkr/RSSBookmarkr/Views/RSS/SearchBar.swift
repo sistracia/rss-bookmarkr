@@ -22,7 +22,11 @@ struct SearchBar: View {
                 )
                 
                 Button {
-                    modelData.addUrl(URL(string: url)!)
+                    guard let parsedUrl = URL(string:url) else {
+                        return
+                    }
+                    
+                    modelData.addUrl(parsedUrl)
                     url = ""
                 } label: {
                     Text("Add")
