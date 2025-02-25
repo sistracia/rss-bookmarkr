@@ -48,7 +48,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		EE28ACCB2C0F60FF00309C42 /* RSSBookmarkr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RSSBookmarkr.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EE28ACCB2C0F60FF00309C42 /* RSS Bookmarkr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "RSS Bookmarkr.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		EE28ACCE2C0F60FF00309C42 /* RSSBookmarkrApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSBookmarkrApp.swift; sourceTree = "<group>"; };
 		EE28ACD02C0F60FF00309C42 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		EE28ACD22C0F610000309C42 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -111,7 +111,7 @@
 		EE28ACCC2C0F60FF00309C42 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				EE28ACCB2C0F60FF00309C42 /* RSSBookmarkr.app */,
+				EE28ACCB2C0F60FF00309C42 /* RSS Bookmarkr.app */,
 				EE28ACE52C0F610000309C42 /* RSSBookmarkrUITests.xctest */,
 			);
 			name = Products;
@@ -233,7 +233,7 @@
 			);
 			name = RSSBookmarkr;
 			productName = RSSBookmarkr;
-			productReference = EE28ACCB2C0F60FF00309C42 /* RSSBookmarkr.app */;
+			productReference = EE28ACCB2C0F60FF00309C42 /* RSS Bookmarkr.app */;
 			productType = "com.apple.product-type.application";
 		};
 		EE28ACE42C0F610000309C42 /* RSSBookmarkrUITests */ = {
@@ -506,7 +506,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sistracia.RSSBookmarkr;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "RSS Bookmarkr";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
@@ -541,7 +541,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sistracia.RSSBookmarkr;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "RSS Bookmarkr";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
