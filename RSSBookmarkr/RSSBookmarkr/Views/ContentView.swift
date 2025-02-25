@@ -86,7 +86,6 @@ struct ContentView: View {
                 } else {
                     Button {
                         modelData.logout()
-                        sessionId = nil
                     } label: {
                         Text("Log Out")
                     }
@@ -98,7 +97,6 @@ struct ContentView: View {
                         Task {
                             await modelData.login(
                                 username: username, password: password)
-                            sessionId = modelData.user?.sessionId
                             showLoginSheet.toggle()
                         }
                     }
@@ -116,7 +114,9 @@ struct ContentView: View {
                 }
                 .presentationDetents([.height(150)])
             }
-            
+            .onChange(of: modelData.user?.sessionId) { _, newValue in
+                sessionId = newValue
+            }
             .toast(message: error.1, isShowing: showError)
             .toast(message: "Urls saved successfully", isShowing: $showSavedUrlToast)
         }

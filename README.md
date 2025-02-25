@@ -1,3 +1,9 @@
+<div align="center">
+  <picture>
+     <img width="100" alt="logo" src="./RSSBookmarkr/RSSBookmarkr/Assets.xcassets/AppIcon.appiconset/rssbookmarkr_app_icon_1024x1024.png">
+  </picture>
+</div>
+
 # RSS Bokmarkr
 
 Bookmark your favorite RSS feeds.
@@ -137,6 +143,7 @@ Prepare the app in isolated Docker environment.
 ```bash
 make test_e2e_setup
 ```
+
 Wait until the app's container healthy, then run the migration.
 
 ```bash
