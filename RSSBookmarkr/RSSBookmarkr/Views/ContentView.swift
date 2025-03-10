@@ -5,6 +5,7 @@ struct ContentView: View {
     @State private var showLoginSheet = false
     @State private var showSubscriptionSheet = false
     @State private var showSavedUrlToast = false
+    @State private var sheetHeight: CGFloat = .zero
     
     @AppStorage("sessionId") var sessionId: String?
     
@@ -92,27 +93,29 @@ struct ContentView: View {
                 }
             }
             .sheet(isPresented: $showLoginSheet) {
-                NavigationStack {
-                    LoginForm { username, password in
-                        Task {
-                            await modelData.login(
-                                username: username, password: password)
-                            showLoginSheet.toggle()
-                        }
+                LoginForm { username, password in
+                    Task {
+                        await modelData.login(
+                            username: username, password: password)
+                        showLoginSheet.toggle()
                     }
                 }
-                .presentationDetents([.height(200)])
+                .heightChangePreference { height in
+                    sheetHeight = height
+                }
+                .presentationDetents([.height(sheetHeight)])
             }
             .sheet(isPresented: $showSubscriptionSheet) {
-                NavigationStack {
-                    SubscriptionForm { email in
-                        Task {
-                            await modelData.subscribe(email: email)
-                            showSubscriptionSheet.toggle()
-                        }
+                SubscriptionForm { email in
+                    Task {
+                        await modelData.subscribe(email: email)
+                        showSubscriptionSheet.toggle()
                     }
                 }
-                .presentationDetents([.height(150)])
+                .heightChangePreference { height in
+                    sheetHeight = height
+                }
+                .presentationDetents([.height(sheetHeight)])
             }
             .onChange(of: modelData.user?.sessionId) { _, newValue in
                 sessionId = newValue
@@ -129,7 +132,7 @@ struct ContentView: View {
     }
 }
 
-#Preview("Logged In") {
+#Preview("Logged In - List") {
     @Previewable @State var modelData = ModelData(rssBookrmarkrClient: RSSBookmarkrClient(baseURL: URL(string: "https://rssbookmarkr.sistracia.com/rpc/IRPCStore/")!))
     modelData.user = User(
         userId: "userId", sessionId: "sessionId", email: "email@example.com")
@@ -168,6 +171,20 @@ struct ContentView: View {
         .placeholder,
         .placeholder,
     ]
+    return ContentView().environment(modelData)
+}
+
+#Preview("Logged In - Subscribed") {
+    @Previewable @State var modelData = ModelData(rssBookrmarkrClient: RSSBookmarkrClient(baseURL: URL(string: "https://rssbookmarkr.sistracia.com/rpc/IRPCStore/")!))
+    modelData.user = User(
+        userId: "userId", sessionId: "sessionId", email: "email@example.com")
+    return ContentView().environment(modelData)
+}
+
+#Preview("Logged In - Not Subscribed") {
+    @Previewable @State var modelData = ModelData(rssBookrmarkrClient: RSSBookmarkrClient(baseURL: URL(string: "https://rssbookmarkr.sistracia.com/rpc/IRPCStore/")!))
+    modelData.user = User(
+        userId: "userId", sessionId: "sessionId", email: "")
     return ContentView().environment(modelData)
 }
 

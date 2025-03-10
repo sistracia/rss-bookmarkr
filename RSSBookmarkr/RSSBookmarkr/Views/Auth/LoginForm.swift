@@ -29,6 +29,7 @@ struct LoginForm: View {
             }
         }
         .listSectionSpacing(8)
+        .frame(height: 200)
     }
 }
 

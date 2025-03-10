@@ -26,6 +26,7 @@ struct SubscriptionForm: View {
             }
         }
         .listSectionSpacing(8)
+        .frame(height: 155)
     }
 }
 

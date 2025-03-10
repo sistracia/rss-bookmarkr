@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		EE0B51AA2D7EF5DC00CF7F9B /* HeightChangePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0B51A92D7EF5D600CF7F9B /* HeightChangePreference.swift */; };
 		EE28ACCF2C0F60FF00309C42 /* RSSBookmarkrApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE28ACCE2C0F60FF00309C42 /* RSSBookmarkrApp.swift */; };
 		EE28ACD12C0F60FF00309C42 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE28ACD02C0F60FF00309C42 /* ContentView.swift */; };
 		EE28ACD32C0F610000309C42 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EE28ACD22C0F610000309C42 /* Assets.xcassets */; };
@@ -48,6 +49,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		EE0B51A92D7EF5D600CF7F9B /* HeightChangePreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeightChangePreference.swift; sourceTree = "<group>"; };
 		EE28ACCB2C0F60FF00309C42 /* RSS Bookmarkr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "RSS Bookmarkr.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		EE28ACCE2C0F60FF00309C42 /* RSSBookmarkrApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RSSBookmarkrApp.swift; sourceTree = "<group>"; };
 		EE28ACD02C0F60FF00309C42 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -171,6 +173,7 @@
 		EE9164552D5EDA0F00A9F199 /* Helper */ = {
 			isa = PBXGroup;
 			children = (
+				EE0B51A92D7EF5D600CF7F9B /* HeightChangePreference.swift */,
 				EE612E592D602DD4007C31FD /* Toast.swift */,
 				EE9164562D5EDA2300A9F199 /* FlowLayout.swift */,
 				EE9164582D5EDB1600A9F199 /* Shimmer.swift */,
@@ -333,6 +336,7 @@
 				EE9721C02D5AF7C900B359B3 /* RSSError.swift in Sources */,
 				EE9721BE2D5AF5A900B359B3 /* RSS.swift in Sources */,
 				EE9721C22D5B023900B359B3 /* RSSHTTPClient.swift in Sources */,
+				EE0B51AA2D7EF5DC00CF7F9B /* HeightChangePreference.swift in Sources */,
 				EE9721BC2D5AF20800B359B3 /* RSSBookmarkrClient.swift in Sources */,
 				EE612E582D602A30007C31FD /* SubscriptionForm.swift in Sources */,
 				EE28ACCF2C0F60FF00309C42 /* RSSBookmarkrApp.swift in Sources */,
