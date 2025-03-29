@@ -5,7 +5,6 @@ struct ContentView: View {
     @State private var showLoginSheet = false
     @State private var showSubscriptionSheet = false
     @State private var showSavedUrlToast = false
-    @State private var sheetHeight: CGFloat = .zero
     
     @AppStorage("sessionId") var sessionId: String?
     
@@ -92,7 +91,7 @@ struct ContentView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showLoginSheet) {
+            .fitSheet(isPresented: $showLoginSheet) {
                 LoginForm { username, password in
                     Task {
                         await modelData.login(
@@ -100,22 +99,14 @@ struct ContentView: View {
                         showLoginSheet.toggle()
                     }
                 }
-                .heightChangePreference { height in
-                    sheetHeight = height
-                }
-                .presentationDetents([.height(sheetHeight)])
             }
-            .sheet(isPresented: $showSubscriptionSheet) {
+            .fitSheet(isPresented: $showSubscriptionSheet) {
                 SubscriptionForm { email in
                     Task {
                         await modelData.subscribe(email: email)
                         showSubscriptionSheet.toggle()
                     }
                 }
-                .heightChangePreference { height in
-                    sheetHeight = height
-                }
-                .presentationDetents([.height(sheetHeight)])
             }
             .onChange(of: modelData.user?.sessionId) { _, newValue in
                 sessionId = newValue
