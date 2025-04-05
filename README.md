@@ -6,11 +6,7 @@
 
 # RSS Bokmarkr
 
-Bookmark your favorite RSS feeds.
-
-|                                                     Manage RSS urls                                                      |                                                    Save RSS urls                                                     |                                                     Subscribe to RSS feeds                                                     |
-| :----------------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------------------------: |
-| <video al width="240" height="360" controls><source src="./demo/manage-url.mp4" type="video/mp4">Manage RSS urls</video> | <video al width="240" height="360" controls><source src="./demo/save-url.mp4" type="video/mp4">Save RSS urls</video> | <video al width="240" height="360" controls><source src="./demo/subscribe.mp4" type="video/mp4">Subscribe to RSS feeds</video> |
+Bookmark your favorite RSS feeds. See [demo below](#demo).
 
 ## Development
 
@@ -165,3 +161,11 @@ Cleanup the app's container.
 ```bash
 make test_e2e_teardown
 ```
+
+## Demo
+
+https://github.com/user-attachments/assets/c49455fd-74fb-4da5-9d5a-5c306c0b7e5b
+
+https://github.com/user-attachments/assets/1d946bb1-f023-4599-922f-0a7c363705bb
+
+https://github.com/user-attachments/assets/8782d765-b4eb-4353-8d1b-3458ab3913da
