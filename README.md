@@ -8,6 +8,10 @@
 
 Bookmark your favorite RSS feeds.
 
+|                                                     Manage RSS urls                                                      |                                                    Save RSS urls                                                     |                                                     Subscribe to RSS feeds                                                     |
+| :----------------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------------------------: |
+| <video al width="240" height="360" controls><source src="./demo/manage-url.mp4" type="video/mp4">Manage RSS urls</video> | <video al width="240" height="360" controls><source src="./demo/save-url.mp4" type="video/mp4">Save RSS urls</video> | <video al width="240" height="360" controls><source src="./demo/subscribe.mp4" type="video/mp4">Subscribe to RSS feeds</video> |
+
 ## Development
 
 ### Prerequisite Tools
