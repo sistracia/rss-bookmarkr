@@ -6,7 +6,7 @@
 
 # RSS Bokmarkr
 
-Bookmark your favorite RSS feeds. See [demo below](#demo).
+Subscribe to any RSS feed and get notified. See [demo below](#demo).
 
 ## Development
 
