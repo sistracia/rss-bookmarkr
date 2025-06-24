@@ -3,8 +3,14 @@ import Foundation
 @MainActor @Observable
 class ModelData {
     var user: User?
-    var urls: [URL] = []
     var rssList: [RSS] = []
+    var urls: [URL] = [] {
+        didSet {
+            Task {
+                await self.getRSSList(self.urls)
+            }
+        }
+    }
     private let defaultRSS = Array(repeating: RSS.placeholder, count: 10)
     
     var serverState: ServerState = .idle
@@ -39,22 +45,14 @@ class ModelData {
         return defaultReturn
     }
     
-    @MainActor func refreshRSSListAfterAction(callback: () -> Void) {
-        callback()
-        Task {
-            await self.getRSSList(self.urls)
-        }
-    }
     
     func loginSuccess(loginResponse: LoginResponse) {
-        refreshRSSListAfterAction {
-            switch loginResponse {
-            case .success(let profile):
-                self.user = User(userId: profile.userId, sessionId: profile.sessionId, email: profile.email)
-                self.urls = profile.rssUrls
-            default:
-                break
-            }
+        switch loginResponse {
+        case .success(let profile):
+            self.user = User(userId: profile.userId, sessionId: profile.sessionId, email: profile.email)
+            self.urls = profile.rssUrls
+        default:
+            break
         }
     }
     
@@ -97,21 +95,15 @@ class ModelData {
         }) {
             return
         }
-        refreshRSSListAfterAction {
-            self.urls.append(url)
-        }
+        self.urls.append(url)
     }
     
     func setUrls(_ urls: [URL]) {
-        refreshRSSListAfterAction {
-            self.urls = urls
-        }
+        self.urls = urls
     }
     
     func removeUrl(url: URL) {
-        refreshRSSListAfterAction {
-            self.urls = self.urls.filter { $0 != url }
-        }
+        self.urls = self.urls.filter { $0 != url }
     }
     
     func saveUrls() async {
