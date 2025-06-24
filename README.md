@@ -1,6 +1,6 @@
 <div align="center">
   <picture>
-     <img width="100" alt="logo" src="./RSSBookmarkr/RSSBookmarkr/Assets.xcassets/AppIcon.appiconset/rssbookmarkr_app_icon_1024x1024.png">
+     <img width="100" alt="logo" src="./ios/RSSBookmarkr/Assets.xcassets/AppIcon.appiconset/rssbookmarkr_app_icon_1024x1024.png">
   </picture>
 </div>
 
