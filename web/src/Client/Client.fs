@@ -275,7 +275,8 @@ module RSS =
                 Html.h2 [ prop.text "Subscribe Form" ]
                 Daisy.floatingLabel [
                     Daisy.input
-                      [ prop.placeholder "email@domain.com"
+                      [ prop.className "w-full"
+                        prop.placeholder "email@domain.com"
                         prop.required true
                         prop.value state.Email
                         prop.onChange (ChangeEmail >> dispatch) ]
