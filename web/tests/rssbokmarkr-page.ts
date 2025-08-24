@@ -51,7 +51,7 @@ export class RSSBokmarkrPage {
     }
 
     private loginPasswordField(): Locator {
-        return this.page.getByPlaceholder("******");
+        return this.page.getByPlaceholder("Password");
     }
 
     private logoutButton(): Locator {
