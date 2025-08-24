@@ -27,17 +27,17 @@ module Session =
     let sessionKey: string = "session_id"
 
     let tryGetSessionId () : string option =
-        Browser.WebStorage.localStorage.getItem (sessionKey)
+        Browser.WebStorage.localStorage.getItem sessionKey
         |> (function
         | null -> None
         | (x: string) -> Some(x))
-        |> Option.bind (fun x -> if String.IsNullOrWhiteSpace(x) then None else Some x)
+        |> Option.bind (fun x -> if String.IsNullOrWhiteSpace x then None else Some x)
 
     let removeSessionId () =
-        Browser.WebStorage.localStorage.removeItem (sessionKey)
+        Browser.WebStorage.localStorage.removeItem sessionKey
 
     let setSessionId (sessionId: string) =
-        if String.IsNullOrWhiteSpace(sessionId) then
+        if String.IsNullOrWhiteSpace sessionId then
             removeSessionId ()
         else
             Browser.WebStorage.localStorage.setItem (sessionKey, sessionId)
@@ -56,10 +56,9 @@ module RPC =
     let saveRSSUrlssss (userId: string, rssUrls: string array) : unit Async =
         async {
             do!
-                store.saveRSSUrls (
+                store.saveRSSUrls
                     { SaveRSSUrlReq.Urls = rssUrls
                       SaveRSSUrlReq.UserId = userId }
-                )
         }
 
     let initLogin (sessionId: string) : LoginResponse Async =
@@ -87,9 +86,9 @@ module Component =
 
 module Search =
     let generateUrlSearch (urls: string seq) : string =
-        match (urls |> String.concat ",") with
+        match urls |> String.concat "," with
         | "" -> "/"
-        | newUrl -> ("?url=" + newUrl)
+        | newUrl -> "?url=" + newUrl
 
 
 module RSS =
@@ -232,8 +231,7 @@ module RSS =
     [<ReactComponent>]
     let SkeletonLoadings () =
         Daisy.card
-            [ card.border
-              prop.className "flex flex-col gap-3 p-8"
+            [ prop.className "flex flex-col gap-3 p-8"
               prop.children
                   [ Daisy.skeleton [ prop.className "h-6 w-full" ]
                     Daisy.skeleton [ prop.className "h-4 w-1/4" ]
@@ -260,7 +258,7 @@ module RSS =
                   [ yield!
                         [ for url in state.Urls do
                               Html.div
-                                  [ (color.bgNeutral ++ (prop.className "p-1 rounded-lg flex gap-1"))
+                                  [ color.bgNeutral ++ prop.className "p-1 rounded-lg flex gap-1"
                                     prop.children
                                         [ Daisy.button.button
                                               [ button.error
@@ -271,24 +269,25 @@ module RSS =
 
     [<ReactComponent>]
     let SubscriptionForm (user: User) (state: State) (dispatch: Msg -> unit) =
-        Html.form
-            [ Html.h2 [ prop.text "Subscribe Form" ]
-              Daisy.floatingLabel [
-                  Daisy.input
-                    [ prop.placeholder "email@domain.com"
-                      prop.required true
-                      prop.value state.Email
-                      prop.onChange (ChangeEmail >> dispatch) ]
-                  Html.span "E-Mail" ]
-              Daisy.modalAction
-                  [ Daisy.button.label [ prop.htmlFor "subscribe-modal"; prop.text "Cancel" ]
-                    Daisy.button.label
-                        [ button.neutral
-                          prop.htmlFor "subscribe-modal"
-                          prop.text "Subscribe"
-                          prop.type' "submit"
-                          prop.onClick (fun _ -> dispatch (Subscribe user.UserId)) ] ] ]
-
+        Html.form [
+          prop.className "flex flex-col gap-4"
+          prop.children [
+                Html.h2 [ prop.text "Subscribe Form" ]
+                Daisy.floatingLabel [
+                    Daisy.input
+                      [ prop.placeholder "email@domain.com"
+                        prop.required true
+                        prop.value state.Email
+                        prop.onChange (ChangeEmail >> dispatch) ]
+                    Html.span "E-Mail" ]
+                Daisy.modalAction
+                    [ Daisy.button.label [ prop.htmlFor "subscribe-modal"; prop.text "Cancel" ]
+                      Daisy.button.label
+                          [ button.neutral
+                            prop.htmlFor "subscribe-modal"
+                            prop.text "Subscribe"
+                            prop.type' "submit"
+                            prop.onClick (fun _ -> dispatch (Subscribe user.UserId)) ] ] ] ]
     [<ReactComponent>]
     let SubscriptionAction (user: User) (state: State) (dispatch: Msg -> unit) =
         React.fragment
@@ -325,8 +324,7 @@ module RSS =
     [<ReactComponent>]
     let RSSCard (rss: RSS) =
         Daisy.card
-            [ card.border
-              prop.children
+            [ prop.children
                   [ Daisy.cardBody
                         [ Daisy.cardTitle rss.Title
                           Daisy.link
@@ -417,7 +415,7 @@ module Auth =
                     | Success(loginResult: LoginSuccess) -> Some loginResult |> LoginSuccess
                     | Failed(_: LoginFailed) -> Some "The password you entered is incorrect." |> SetError
 
-                let ofError = (fun (ex: exn) -> Some ex.Message |> SetError)
+                let ofError = fun (ex: exn) -> Some ex.Message |> SetError
 
                 nextState, Cmd.OfAsync.either RPC.loginOrRegister credentials ofSuccess ofError
         | InitUser ->
@@ -429,7 +427,7 @@ module Auth =
                     | Success(loginResult: LoginSuccess) -> Some loginResult |> LoginSuccess
                     | _ -> Some "Failed to login account." |> SetError
 
-                let ofError = (fun (ex: exn) -> Some ex.Message |> SetError)
+                let ofError = fun (ex: exn) -> Some ex.Message |> SetError
                 state, Cmd.OfAsync.either RPC.initLogin sessionId ofSuccess ofError
         | SetError(error: string option) ->
             let nextState: State =
@@ -444,7 +442,7 @@ module Auth =
     [<ReactComponent>]
     let NavBar (isLoggedIn: bool) (dispatch: Msg -> unit) =
         Daisy.navbar
-            [ prop.className "mb-2 shadow-lg bg-neutral text-neutral-content rounded-box"
+            [ prop.key "navbar"
               prop.children
                   [ Daisy.navbarStart [ Html.h1 [ prop.text "RSS Bookmarkr" ] ]
                     Daisy.navbarEnd
@@ -464,24 +462,31 @@ module Auth =
 
     [<ReactComponent>]
     let LoginForm (state: State) (dispatch: Msg -> unit) =
-        Html.form
-            [ Html.h2 [ prop.text "Log In Form" ]
-              Html.div
-                  [ Daisy.floatingLabel [
+        Html.form [
+            prop.key "login-form"
+            prop.className "flex flex-col gap-4"
+            prop.children [
+              Html.h2 [ prop.text "Log In Form" ]
+              Html.div [
+                  prop.className "flex flex-col gap-4"
+                  prop.children [
+                    Daisy.floatingLabel [
                           Daisy.input
-                            [ prop.placeholder "Username"
+                            [ prop.className "w-full"
+                              prop.placeholder "Username"
                               prop.required true
                               prop.value state.InputUsername
                               prop.onChange (ChangeUsername >> dispatch) ]
                           Html.span "Username" ]
                     Daisy.floatingLabel [
                           Daisy.input
-                            [ prop.type' "password"
-                              prop.placeholder "******"
+                            [ prop.className "w-full"
+                              prop.type' "password"
+                              prop.placeholder "Password"
                               prop.required true
                               prop.value state.InputPassword
                               prop.onChange (ChangePassword >> dispatch) ]
-                          Html.span "Password" ] ]
+                          Html.span "Password" ] ] ]
               Html.p "Account will be automatically created if not exist."
               Daisy.modalAction
                   [ Daisy.button.label [ prop.htmlFor "login-modal"; prop.text "Cancel" ]
@@ -490,7 +495,7 @@ module Auth =
                           prop.htmlFor "login-modal"
                           prop.text "Log In"
                           prop.type' "submit"
-                          prop.onClick (fun _ -> dispatch Login) ] ] ]
+                          prop.onClick (fun _ -> dispatch Login) ] ] ] ]
 
     [<ReactComponent>]
     let LoginAction (state: State) (dispatch: Msg -> unit) =

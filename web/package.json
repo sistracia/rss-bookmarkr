@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "start:server": "make server",
-    "start:client": "concurrently \"make style\" \"make client\"",
-    "start": "concurrently \"make server\" \"make style\" \"make client\"",
+    "start:client": "concurrently \"make client\" \"make style\"",
+    "start": "concurrently \"make server\" \"make client\" \"make style\"",
     "test": "playwright test --reporter list",
     "test:ui": "playwright test --ui",
     "test:codegen": "playwright codegen"

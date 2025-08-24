@@ -17,8 +17,13 @@ migrate_up:
 build_fable:
 	dotnet fable --cwd src/Client -o output
 
-build_style:
+build_client_web:
+	dotnet fable --cwd src/Client -o output -s
+
+build_client_style:
 	bunx @tailwindcss/cli -i ./src/Client/input.css -o ./src/Client/output/output.css --minify
+
+build_style: build_client_web build_client_style
 
 build_client:
 	bunx vite build ./src/Client
