@@ -42,7 +42,7 @@ copy_email:
 publish_project: publish_client publish_server copy_client copy_email
 
 test_e2e_setup:
-	docker compose -p rss-bookmarkr -f docker-compose.e2e.yaml up --build -d
+	docker compose -p rss-bookmarkr -f compose.e2e.yaml up --build -d
 
 test_e2e_migration_backup:
 	mv migrondi.json migrondi.bak.json ;\
@@ -55,7 +55,7 @@ test_e2e_migration_restore:
 test_e2e_migration: test_e2e_migration_backup migrate_up test_e2e_migration_restore
 
 test_e2e_teardown:
-	docker compose -p rss-bookmarkr -f docker-compose.e2e.yaml down
+	docker compose -p rss-bookmarkr -f compose.e2e.yaml down
 
 test_unit_server:
 	dotnet run --project src/Server.Test

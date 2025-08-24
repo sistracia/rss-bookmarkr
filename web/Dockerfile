@@ -53,7 +53,7 @@ COPY . .
 COPY --from=server-build /Server/src/Client/output ./src/Client/output
 
 ENV NODE_ENV=production
-RUN make build_style
+RUN make build_client_style
 RUN make build_client
 
 ## App Area

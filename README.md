@@ -100,10 +100,10 @@ ASPNETCORE_URLS=http://${HOSTNAME}:${PORT}
 
 #### Using `docker compose up`
 
-See the [docker-compose.yaml here](./web/docker-compose.yaml).
+See the [compose.yaml here](./web/compose.yaml).
 
 ```bash
-docker compose up -f docker-compose.yaml
+docker compose up -f compose.yaml
 ```
 
 #### Using `docker build` and `docker run`
