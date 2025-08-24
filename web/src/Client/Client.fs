@@ -232,7 +232,7 @@ module RSS =
     [<ReactComponent>]
     let SkeletonLoadings () =
         Daisy.card
-            [ card.bordered
+            [ card.border
               prop.className "flex flex-col gap-3 p-8"
               prop.children
                   [ Daisy.skeleton [ prop.className "h-6 w-full" ]
@@ -246,8 +246,7 @@ module RSS =
             [ prop.className "w-full flex flex-wrap gap-3"
               prop.children
                   [ Daisy.input
-                        [ input.bordered
-                          prop.value state.Url
+                        [ prop.value state.Url
                           prop.onChange (SetUrl >> dispatch)
                           prop.className "flex-1"
                           prop.placeholder "https://overreacted.io/rss.xml" ]
@@ -274,17 +273,13 @@ module RSS =
     let SubscriptionForm (user: User) (state: State) (dispatch: Msg -> unit) =
         Html.form
             [ Html.h2 [ prop.text "Subscribe Form" ]
-              Daisy.formControl
-                  [ Daisy.label
-                        [ prop.htmlFor "subscribe-email-field"
-                          prop.children [ Daisy.labelText "E-Mail" ] ]
-                    Daisy.input
-                        [ input.bordered
-                          prop.id "subscribe-email-field"
-                          prop.placeholder "email@domain.com"
-                          prop.required true
-                          prop.value state.Email
-                          prop.onChange (ChangeEmail >> dispatch) ] ]
+              Daisy.floatingLabel [
+                  Daisy.input
+                    [ prop.placeholder "email@domain.com"
+                      prop.required true
+                      prop.value state.Email
+                      prop.onChange (ChangeEmail >> dispatch) ]
+                  Html.span "E-Mail" ]
               Daisy.modalAction
                   [ Daisy.button.label [ prop.htmlFor "subscribe-modal"; prop.text "Cancel" ]
                     Daisy.button.label
@@ -330,7 +325,7 @@ module RSS =
     [<ReactComponent>]
     let RSSCard (rss: RSS) =
         Daisy.card
-            [ card.bordered
+            [ card.border
               prop.children
                   [ Daisy.cardBody
                         [ Daisy.cardTitle rss.Title
@@ -471,29 +466,22 @@ module Auth =
     let LoginForm (state: State) (dispatch: Msg -> unit) =
         Html.form
             [ Html.h2 [ prop.text "Log In Form" ]
-              Daisy.formControl
-                  [ Daisy.label
-                        [ prop.htmlFor "login-username-field"
-                          prop.children [ Daisy.labelText "Username" ] ]
-                    Daisy.input
-                        [ input.bordered
-                          prop.id "login-username-field"
-                          prop.placeholder "Username"
-                          prop.required true
-                          prop.value state.InputUsername
-                          prop.onChange (ChangeUsername >> dispatch) ] ]
-              Daisy.formControl
-                  [ Daisy.label
-                        [ prop.htmlFor "password-username-field"
-                          prop.children [ Daisy.labelText "Password" ] ]
-                    Daisy.input
-                        [ input.bordered
-                          prop.id "password-username-field"
-                          prop.type' "password"
-                          prop.placeholder "******"
-                          prop.required true
-                          prop.value state.InputPassword
-                          prop.onChange (ChangePassword >> dispatch) ] ]
+              Html.div
+                  [ Daisy.floatingLabel [
+                          Daisy.input
+                            [ prop.placeholder "Username"
+                              prop.required true
+                              prop.value state.InputUsername
+                              prop.onChange (ChangeUsername >> dispatch) ]
+                          Html.span "Username" ]
+                    Daisy.floatingLabel [
+                          Daisy.input
+                            [ prop.type' "password"
+                              prop.placeholder "******"
+                              prop.required true
+                              prop.value state.InputPassword
+                              prop.onChange (ChangePassword >> dispatch) ]
+                          Html.span "Password" ] ]
               Html.p "Account will be automatically created if not exist."
               Daisy.modalAction
                   [ Daisy.button.label [ prop.htmlFor "login-modal"; prop.text "Cancel" ]
