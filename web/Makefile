@@ -9,7 +9,7 @@ client:
 	dotnet fable watch --cwd src/Client -o output -s --run bunx vite
 
 style:
-	bunx tailwindcss -i ./src/Client/input.css -o ./src/Client/output/output.css --watch
+	bunx @tailwindcss/cli -i ./src/Client/input.css -o ./src/Client/output/output.css --watch
 
 migrate_up:
 	dotnet migrondi up --dry-run false
@@ -18,7 +18,7 @@ build_fable:
 	dotnet fable --cwd src/Client -o output
 
 build_style:
-	bunx tailwindcss -i ./src/Client/input.css -o ./src/Client/output/output.css --minify
+	bunx @tailwindcss/cli -i ./src/Client/input.css -o ./src/Client/output/output.css --minify
 
 build_client:
 	bunx vite build ./src/Client
