@@ -12,7 +12,7 @@ style:
 	bunx @tailwindcss/cli -i ./src/Client/input.css -o ./src/Client/output/output.css --watch
 
 migrate_up:
-	dotnet migrondi up --dry-run false
+	dotnet migrondi up --dry false
 
 build_fable:
 	dotnet fable --cwd src/Client -o output
